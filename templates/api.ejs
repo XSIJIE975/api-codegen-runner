@@ -1,0 +1,56 @@
+<%# 
+  ========================================================================
+  API TEMPLATE DOCUMENTATION
+  ========================================================================
+  
+  Available Variables:
+  
+  1. imports (Object)
+     - imports.types (string[]): List of type names used in this file. e.g. ['UserDto', 'ApiResponse']
+     - imports.relativePath (string): Relative path to the types directory. e.g. '../../types'
+  
+  2. functions (Array of Objects) - Each function corresponds to an API endpoint
+     - fn.name (string): Function name. e.g. 'getUserById'
+     - fn.method (string): HTTP method (lowercase). e.g. 'get', 'post'
+     - fn.url (string): Request URL with template literals. e.g. `/users/${id}`
+     - fn.description (string): JSDoc description or summary.
+     - fn.responseType (string): TypeScript return type. e.g. 'ApiSuccessResponse<UserVo>'
+     
+     - fn.hasPathParams (boolean): Does the URL contain path parameters?
+     - fn.hasQueryParams (boolean): Are there query parameters?
+     - fn.hasBody (boolean): Is there a request body?
+     
+     - fn.paramsSignature (string): 
+       Ready-to-use parameter string for function definition.
+       e.g. "id: string, data: CreateUserDto"
+       
+     - fn.allParams (Array): Detailed parameter list for custom logic.
+       [
+         { name: 'id', type: 'string', in: 'path', required: true },
+         { name: 'data', type: 'UserDto', in: 'body', required: true },
+         { name: 'params', type: 'PageQuery', in: 'query', required: false }
+       ]
+
+  3. config (Object)
+     - Mirrors the `globalContext` from your codegen.config.ts
+     - e.g. config.importRequestStr
+     
+  ========================================================================
+%>
+<%- config.importRequestStr %>
+import type { 
+<% imports.types.forEach(t => { %>  <%= t %>,
+<% }) %> 
+} from '<%= imports.relativePath %>';
+
+<% functions.forEach(fn => { %>
+/**
+ * <%= fn.description %>
+ */
+export function <%= fn.name %>(<%- fn.paramsSignature %>) {
+  return request.<%= fn.method %><<%- fn.responseType %>>(`<%= fn.url %>`, {
+    <% if (fn.hasBody) { %>data,<% } %>
+    <% if (fn.hasQueryParams) { %>params,<% } %>
+  });
+}
+<% }) %>
