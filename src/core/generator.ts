@@ -80,7 +80,6 @@ export class Generator {
         output.typeDir,
         output.apiDir
       );
-      console.log('viewModel', viewModel)
       const code = await this.renderTemplate('api', viewModel);
       const absPath = path.join(output.apiDir, filePath);
       await this.writeFile(absPath, code);
@@ -99,9 +98,7 @@ export class Generator {
 
   private async renderTemplate(type: 'api' | 'type', data: any) {
     const tmpl = await this.getTemplateContent(type);
-    const result = ejs.render(tmpl, data);
-    console.log('结果', result)
-    return result;
+    return ejs.render(tmpl, data);
   }
 
   private async writeFile(filePath: string, content: string) {

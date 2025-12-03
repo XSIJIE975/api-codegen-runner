@@ -31,17 +31,8 @@ export default defineConfig({
     // 代码生成选项
     codeGeneration: {
       parameterNamingStyle: 'camelCase', // 'PascalCase' | 'camelCase' | 'snake_case'
-      // Control how types are exported:
-      // 'export' -> All in one file (default behavior usually handled by global mode)
-      // If you want separate files, you might need to combine this with internal logic,
-      // BUT for this runner:
-      // The runner decides file splitting based on metadata.interfaceExportMode.
-      // However, usually we set 'interfaceExportMode' to 'export' for valid TS code.
-      // To trigger Separate Mode in Runner, verify how metadata is passed.
-      // (Actually, users should just rely on the default 'global' unless they have complex needs)
-      interfaceExportMode: 'export',
+      interfaceExportMode: 'export', // 接口导出方式，export | declare
       output: {
-        // Control what to parse
         schemas: true,
         interfaces: true,
         apis: true
@@ -110,7 +101,7 @@ export async function initCommand() {
 
       await fs.copy(src, dest, { overwrite: false });
       console.log(chalk.green(`✅ Templates copied to ${dest}`));
-      console.log(chalk.gray('👉 You can now edit ./templates/api.ejs and update codegen.config.ts to use it.'));
+      console.log(chalk.gray('👉 You can now edit ./templates/api.ejs or ./templates/type.ejs and update codegen.config.ts to use it.'));
     } catch (e: any) {
       console.error(chalk.red(`❌ Failed to copy templates: ${e.message}`));
     }
