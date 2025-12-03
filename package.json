@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "description": "Generate API code from standardized JSON using templates",
   "type": "module",
-  "main": "./dist/index.cjs",
+  "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
@@ -12,8 +12,7 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
+      "import": "./dist/index.js"
     }
   },
   "files": [
@@ -24,6 +23,9 @@
     "dev": "tsup --watch",
     "build": "tsup",
     "prepublishOnly": "npm run build"
+  },
+  "peerDependencies": {
+    "vite": ">=5.0.0"
   },
   "dependencies": {
     "api-codegen-universal": "^0.3.0",
@@ -44,6 +46,7 @@
     "@types/inquirer": "^9.0.9",
     "@types/node": "^24.10.1",
     "tsup": "^8.5.1",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vite": "^5.4.21"
   }
 }
