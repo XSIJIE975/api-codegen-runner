@@ -2,6 +2,21 @@
   "name": "api-codegen-runner",
   "version": "0.0.0",
   "description": "基于模板的 API 代码生成工具，支持 OpenAPI 和 Apifox",
+  "keywords": [
+    "api",
+    "codegen",
+    "generator",
+    "openapi",
+    "swagger",
+    "apifox",
+    "typescript",
+    "axios",
+    "fetch",
+    "ejs",
+    "template",
+    "cli",
+    "vite-plugin"
+  ],
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -15,10 +30,26 @@
       "import": "./dist/index.js"
     }
   },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "files": [
     "dist",
-    "templates"
+    "templates",
+    "LICENSE"
   ],
+  "author": "XSIJIE975",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/XSIJIE975/api-codegen-runner.git",
+    "directory": "packages/api-codegen-runner"
+  },
+  "homepage": "https://github.com/XSIJIE975/api-codegen-runner#readme",
+  "bugs": {
+    "url": "https://github.com/XSIJIE975/api-codegen-runner/issues"
+  },
   "scripts": {
     "dev": "tsup --watch",
     "build": "tsup",
