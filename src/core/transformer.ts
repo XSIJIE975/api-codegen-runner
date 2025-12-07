@@ -74,6 +74,10 @@ export class Transformer {
     if (!relativePathToTypes.startsWith('.'))
       relativePathToTypes = './' + relativePathToTypes;
 
+    const interfaceExportMode =
+      this.config.requestConfig?.codeGeneration?.interfaceExportMode ||
+      'export';
+
     return {
       meta: {
         generatedAt: new Date().toISOString(),
@@ -82,6 +86,7 @@ export class Transformer {
         types: Array.from(importTypes).sort(),
         relativePath: relativePathToTypes,
       },
+      interfaceExportMode,
       config: this.config.globalContext || {},
       functions,
     };

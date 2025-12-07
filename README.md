@@ -1,7 +1,7 @@
 # API Codegen Runner
 
 [![npm version](https://img.shields.io/npm/v/api-codegen-runner.svg)](https://www.npmjs.com/package/api-codegen-runner)
-[![License](https://img.shields.io/npm/l/api-codegen-runner.svg)](https://github.com/your-repo/api-codegen-runner/blob/main/LICENSE)
+[![License](https://img.shields.io/npm/l/api-codegen-runner.svg)](https://github.com/XSIJIE975/api-codegen-runner/blob/main/LICENSE)
 
 **API Codegen Runner** 是一个强大且灵活的 API 代码生成工具。它基于 `api-codegen-universal` 解析器，支持从 OpenAPI (Swagger) 或 Apifox 自动生成 TypeScript 接口定义和 API 请求函数。
 
@@ -50,7 +50,7 @@ import { defineConfig } from 'api-codegen-runner';
 
 export default defineConfig({
   // 方式 1: OpenAPI 源 (URL 或本地文件路径)
-  input: 'https://petstore.swagger.io/v2/swagger.json',
+  input: 'https://petstore3.swagger.io/api/v3/openapi.json',
 
   // 方式 2: Apifox 源 (取消注释以使用)
   /*
@@ -139,6 +139,7 @@ export default defineConfig({
   - `responseType`: string (返回类型)
   - `paramsSignature`: string (函数参数签名)
   - `allParams`: Array (详细参数列表)
+- `interfaceExportMode`: string ('export' | 'declare') - 类型导出模式。'export' 会生成 import 语句，'declare' 则假设类型为全局可用（不生成 import）。
 - `config`: 全局配置上下文 (`globalContext`)。
 
 ### 类型模板 (`type.ejs`) 可用变量

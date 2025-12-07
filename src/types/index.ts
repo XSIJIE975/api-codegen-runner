@@ -47,6 +47,7 @@ export interface ApiFileViewModel {
     types: string[];
     relativePath: string;
   };
+  interfaceExportMode: 'export' | 'declare';
   config: Record<string, unknown>;
   functions: ApiFunctionViewModel[];
 }

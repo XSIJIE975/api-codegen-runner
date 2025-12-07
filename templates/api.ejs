@@ -31,17 +31,21 @@
          { name: 'params', type: 'PageQuery', in: 'query', required: false }
        ]
 
-  3. config (对象)
+  3. interfaceExportMode (string): 'export' | 'declare'
+
+  4. config (对象)
      - 映射自 codegen.config.ts 中的 `globalContext`
      - 例如 config.importRequestStr
      
   ========================================================================
 %>
 <%- config.importRequestStr %>
+<% if (typeof interfaceExportMode === 'undefined' || interfaceExportMode === 'export') { %>
 import type { 
 <% imports.types.forEach(t => { %>  <%= t %>,
 <% }) %> 
 } from '<%= imports.relativePath %>';
+<% } %>
 
 <% functions.forEach(fn => { %>
 /**
