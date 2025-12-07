@@ -1,6 +1,6 @@
 {
   "name": "api-codegen-runner",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "基于模板的 API 代码生成工具，支持 OpenAPI 和 Apifox",
   "keywords": [
     "api",
