@@ -22,31 +22,49 @@
   "scripts": {
     "dev": "tsup --watch",
     "build": "tsup",
-    "prepublishOnly": "npm run build"
+    "lint": "eslint \"**/*.ts\"",
+    "lint:fix": "eslint \"**/*.ts\" --fix",
+    "format": "prettier --write .",
+    "prepare": "husky",
+    "commitlint": "commitlint --edit",
+    "changeset": "changeset",
+    "version-packages": "changeset version",
+    "release": "changeset publish"
   },
   "peerDependencies": {
     "vite": ">=5.0.0"
   },
   "dependencies": {
     "api-codegen-universal": "^0.4.0",
-    "axios": "^1.13.2",
     "chalk": "^5.6.2",
     "commander": "^14.0.2",
     "ejs": "^3.1.10",
     "fs-extra": "^11.3.2",
     "inquirer": "^13.0.1",
-    "install": "^0.13.0",
     "prettier": "^3.7.3",
-    "unconfig": "^7.4.1",
-    "zod": "^4.1.13"
+    "unconfig": "^7.4.1"
   },
   "devDependencies": {
+    "@changesets/changelog-github": "^0.5.2",
+    "@changesets/cli": "^2.29.8",
+    "@commitlint/cli": "^20.2.0",
+    "@commitlint/config-conventional": "^20.2.0",
+    "@eslint/js": "^9.39.1",
     "@types/ejs": "^3.1.5",
     "@types/fs-extra": "^11.0.4",
     "@types/inquirer": "^9.0.9",
     "@types/node": "^24.10.1",
+    "eslint": "^9.39.1",
+    "globals": "^16.5.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7",
     "tsup": "^8.5.1",
     "typescript": "^5.9.3",
+    "typescript-eslint": "^8.48.1",
     "vite": "^5.4.21"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=8.0.0"
   }
 }
