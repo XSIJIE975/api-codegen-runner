@@ -1,7 +1,7 @@
 {
   "name": "api-codegen-runner",
   "version": "0.0.0",
-  "description": "Generate API code from standardized JSON using templates",
+  "description": "基于模板的 API 代码生成工具，支持 OpenAPI 和 Apifox",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
