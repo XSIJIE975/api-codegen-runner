@@ -1,23 +1,23 @@
 <%# 
   ========================================================================
-  TYPE TEMPLATE DOCUMENTATION
+  类型模板文档
   ========================================================================
   
-  Available Variables:
+  可用变量:
   
   1. code (string): 
-     - Global Mode: All interfaces combined into one string.
-     - Separate Mode: The code for a single interface.
+     - 全局模式: 所有接口合并为一个字符串。
+     - 独立模式: 单个接口的代码。
      
   2. name (string | undefined):
-     - Global Mode: undefined (or 'index')
-     - Separate Mode: The name of the interface (e.g. 'UserDto')
+     - 全局模式: undefined (或 'index')
+     - 独立模式: 接口名称 (例如 'UserDto')
      
   3. isGlobal (boolean):
-     - true: Generating a single index.ts
-     - false: Generating a specific type file
+     - true: 生成单个 index.ts
+     - false: 生成特定的类型文件
      
-  4. config (Object): Global context
+  4. config (Object): 全局上下文
   ========================================================================
 %>
 <%# 这里可以放通用的文件头，比如 eslint-disable %>
@@ -26,8 +26,5 @@
 // -------------------------------------------------------------------
 
 <%- config.importTypeHeaderStr || '' %>
-
-<%# 如果是分文件模式，可能需要在这里手动加一些通用 import，或者由底层库生成 %>
-<%# 目前 api-codegen-universal 输出的 code 是纯接口定义 %>
 
 <%- code %>

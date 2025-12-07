@@ -1,39 +1,39 @@
 <%# 
   ========================================================================
-  API TEMPLATE DOCUMENTATION
+  API 模板文档
   ========================================================================
   
-  Available Variables:
+  可用变量:
   
-  1. imports (Object)
-     - imports.types (string[]): List of type names used in this file. e.g. ['UserDto', 'ApiResponse']
-     - imports.relativePath (string): Relative path to the types directory. e.g. '../../types'
+  1. imports (对象)
+     - imports.types (string[]): 此文件中使用的类型名称列表。例如 ['UserDto', 'ApiResponse']
+     - imports.relativePath (string): 类型目录的相对路径。例如 '../../types'
   
-  2. functions (Array of Objects) - Each function corresponds to an API endpoint
-     - fn.name (string): Function name. e.g. 'getUserById'
-     - fn.method (string): HTTP method (lowercase). e.g. 'get', 'post'
-     - fn.url (string): Request URL with template literals. e.g. `/users/${id}`
-     - fn.description (string): JSDoc description or summary.
-     - fn.responseType (string): TypeScript return type. e.g. 'ApiSuccessResponse<UserVo>'
+  2. functions (对象数组) - 每个函数对应一个 API 端点
+     - fn.name (string): 函数名称。例如 'getUserById'
+     - fn.method (string): HTTP 方法 (小写)。例如 'get', 'post'
+     - fn.url (string): 带有模板字面量的请求 URL。例如 `/users/${id}`
+     - fn.description (string): JSDoc 描述或摘要。
+     - fn.responseType (string): TypeScript 返回类型。例如 'ApiSuccessResponse<UserVo>'
      
-     - fn.hasPathParams (boolean): Does the URL contain path parameters?
-     - fn.hasQueryParams (boolean): Are there query parameters?
-     - fn.hasBody (boolean): Is there a request body?
+     - fn.hasPathParams (boolean): URL 是否包含路径参数？
+     - fn.hasQueryParams (boolean): 是否有查询参数？
+     - fn.hasBody (boolean): 是否有请求体？
      
      - fn.paramsSignature (string): 
-       Ready-to-use parameter string for function definition.
-       e.g. "id: string, data: CreateUserDto"
+       用于函数定义的现成参数字符串。
+       例如 "id: string, data: CreateUserDto"
        
-     - fn.allParams (Array): Detailed parameter list for custom logic.
+     - fn.allParams (Array): 用于自定义逻辑的详细参数列表。
        [
          { name: 'id', type: 'string', in: 'path', required: true },
          { name: 'data', type: 'UserDto', in: 'body', required: true },
          { name: 'params', type: 'PageQuery', in: 'query', required: false }
        ]
 
-  3. config (Object)
-     - Mirrors the `globalContext` from your codegen.config.ts
-     - e.g. config.importRequestStr
+  3. config (对象)
+     - 映射自 codegen.config.ts 中的 `globalContext`
+     - 例如 config.importRequestStr
      
   ========================================================================
 %>
