@@ -1,13 +1,17 @@
-import type { OpenAPIOptions, ApifoxConfig, InputSource } from 'api-codegen-universal'
+import type {
+  OpenAPIOptions,
+  ApifoxConfig,
+  InputSource,
+} from 'api-codegen-universal';
 
 export interface UserConfig {
-  /** 
+  /**
    * 数据源
    * - 字符串: 视为 OpenAPI URL 或 本地文件路径
    * - 对象: 视为 Apifox 配置
    */
   input: InputSource | ApifoxConfig;
-  /** 
+  /**
    * 显式指定模式 (可选)
    * 如果 input 是字符串默认为 'openapi'
    * 如果 input 是对象默认为 'apifox'
@@ -32,7 +36,7 @@ export interface UserConfig {
     api?: string;
     type?: string;
   };
-  globalContext?: Record<string, any>;
+  globalContext?: Record<string, unknown>;
 }
 
 export interface ApiFileViewModel {
@@ -43,7 +47,7 @@ export interface ApiFileViewModel {
     types: string[];
     relativePath: string;
   };
-  config: Record<string, any>;
+  config: Record<string, unknown>;
   functions: ApiFunctionViewModel[];
 }
 

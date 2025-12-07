@@ -61,12 +61,12 @@ export default defineConfig({
 
 export async function initCommand() {
   const cwd = getCwd();
-  
+
   console.log(chalk.blue('🚀 Initializing API Codegen configuration...'));
 
   // 1. 检查并创建配置文件
   const configPath = path.join(cwd, 'codegen.config.ts');
-  if (!await fs.pathExists(configPath)) {
+  if (!(await fs.pathExists(configPath))) {
     await fs.writeFile(configPath, CONFIG_TEMPLATE.trim());
     console.log(chalk.green('✅ Created codegen.config.ts'));
   } else {
@@ -78,7 +78,8 @@ export async function initCommand() {
     {
       type: 'confirm',
       name: 'eject',
-      message: 'Do you want to eject default templates to ./templates folder for customization?',
+      message:
+        'Do you want to eject default templates to ./templates folder for customization?',
       default: false,
     },
   ]);
@@ -88,21 +89,33 @@ export async function initCommand() {
     const dest = path.join(cwd, 'templates');
 
     if (path.resolve(src) === path.resolve(dest)) {
-      console.log(chalk.yellow('⚠️  You are in the project root. Templates already exist. Skipping copy.'));
+      console.log(
+        chalk.yellow(
+          '⚠️  You are in the project root. Templates already exist. Skipping copy.',
+        ),
+      );
       return;
     }
 
     try {
       // 确保内置模板存在
-      if (!await fs.pathExists(src)) {
-        throw new Error(`Internal templates not found at ${src}. (Did you build the project?)`);
+      if (!(await fs.pathExists(src))) {
+        throw new Error(
+          `Internal templates not found at ${src}. (Did you build the project?)`,
+        );
       }
 
       await fs.copy(src, dest, { overwrite: false });
       console.log(chalk.green(`✅ Templates copied to ${dest}`));
-      console.log(chalk.gray('👉 You can now edit ./templates/api.ejs or ./templates/type.ejs and update codegen.config.ts to use it.'));
-    } catch (e: any) {
-      console.error(chalk.red(`❌ Failed to copy templates: ${e.message}`));
+      console.log(
+        chalk.gray(
+          '👉 You can now edit ./templates/api.ejs or ./templates/type.ejs and update codegen.config.ts to use it.',
+        ),
+      );
+    } catch (e: unknown) {
+      console.error(
+        chalk.red(`❌ Failed to copy templates: ${(e as Error).message}`),
+      );
     }
   } else {
     console.log(chalk.gray('ℹ️  Using internal default templates.'));

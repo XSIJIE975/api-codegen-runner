@@ -10,11 +10,12 @@ program.name('api-codegen-runner').version('1.0.0');
 
 program.command('init').action(initCommand);
 
-program.command('generate', { isDefault: true })
+program
+  .command('generate', { isDefault: true })
   .option('-c, --config <path>', 'Config path', 'codegen.config')
   .action(async (opts) => {
     const { config } = await loadConfig<UserConfig>({
-      sources: [{ files: opts.config, extensions: ['ts', 'js'] }]
+      sources: [{ files: opts.config, extensions: ['ts', 'js'] }],
     });
 
     if (!config) {

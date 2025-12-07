@@ -1,7 +1,17 @@
 import path from 'path';
 import type { StandardOutput, ApiDefinition } from 'api-codegen-universal';
-import type { ApiFileViewModel, ApiFunctionViewModel, FunctionParam, UserConfig } from '../types';
-import { extractRefTypes, toCamelCase, toPascalCase, toSnakeCase } from '../utils/formatting';
+import type {
+  ApiFileViewModel,
+  ApiFunctionViewModel,
+  FunctionParam,
+  UserConfig,
+} from '../types';
+import {
+  extractRefTypes,
+  toCamelCase,
+  toPascalCase,
+  toSnakeCase,
+} from '../utils/formatting';
 
 export class Transformer {
   constructor(private config: UserConfig) {}
@@ -10,21 +20,22 @@ export class Transformer {
     data: StandardOutput,
     targetFilePath: string,
     typeDir: string,
-    apiDir: string
+    apiDir: string,
   ): ApiFileViewModel {
-    const { apis, metadata, schemas } = data;
+    const { apis, schemas } = data;
     const importTypes = new Set<string>();
 
-    const functions = apis.map(api => {
+    const functions = apis.map((api) => {
       // 1. URL 处理，如将: /users/{id} -> /users/${id}
-      let url = api.path.replace(/\{([^}]+)\}/g, '${$1}');
+      const url = api.path.replace(/\{([^}]+)\}/g, '${$1}');
 
       // 2. 响应类型解析
       const responseType = this.resolveResponseType(api);
       extractRefTypes(responseType).forEach((t: string) => importTypes.add(t));
 
       // 3. 参数解析 (传入 schemas 以便展开)
-      const { params, signature, hasPath, hasQuery, hasBody } = this.resolveParameters(api, schemas, importTypes);
+      const { params, signature, hasPath, hasQuery, hasBody } =
+        this.resolveParameters(api, schemas, importTypes);
 
       // 4. 方法名格式化
       let name = api.operationId;
@@ -49,26 +60,30 @@ export class Transformer {
         hasQueryParams: hasQuery,
         hasBody: hasBody,
         paramsSignature: signature,
-        allParams: params
+        allParams: params,
       } as ApiFunctionViewModel;
     });
 
     // 4. 计算 import 路径
     const absApiFilePath = path.join(apiDir, targetFilePath);
     const absApiDir = path.dirname(absApiFilePath);
-    let relativePathToTypes = path.relative(absApiDir, typeDir).split(path.sep).join('/');
-    if (!relativePathToTypes.startsWith('.')) relativePathToTypes = './' + relativePathToTypes;
+    let relativePathToTypes = path
+      .relative(absApiDir, typeDir)
+      .split(path.sep)
+      .join('/');
+    if (!relativePathToTypes.startsWith('.'))
+      relativePathToTypes = './' + relativePathToTypes;
 
     return {
       meta: {
-        generatedAt: new Date().toISOString()
+        generatedAt: new Date().toISOString(),
       },
       imports: {
         types: Array.from(importTypes).sort(),
-        relativePath: relativePathToTypes
+        relativePath: relativePathToTypes,
       },
       config: this.config.globalContext || {},
-      functions
+      functions,
     };
   }
 
@@ -80,7 +95,7 @@ export class Transformer {
   private resolveParameters(
     api: ApiDefinition,
     schemas: StandardOutput['schemas'],
-    importTypes: Set<string>
+    importTypes: Set<string>,
   ): {
     params: FunctionParam[];
     signature: string;
@@ -98,18 +113,25 @@ export class Transformer {
 
       if (schema && schema.properties) {
         // 展开模式: 把对象里的属性拿出来作为参数
-        Object.entries(schema.properties).forEach(([key, prop]: [string, any]) => {
-          params.push({
-            name: key,
-            type: this.mapSchemaTypeToTs(prop),
-            in: 'path',
-            required: true
-          });
-        });
+        Object.entries(schema.properties).forEach(
+          ([key, prop]: [string, unknown]) => {
+            params.push({
+              name: key,
+              type: this.mapSchemaTypeToTs(prop),
+              in: 'path',
+              required: true,
+            });
+          },
+        );
       } else {
         // 兜底: 找不到 schema 就把整个对象当参数
         importTypes.add(ref);
-        params.push({ name: 'pathParams', type: ref, in: 'path', required: true });
+        params.push({
+          name: 'pathParams',
+          type: ref,
+          in: 'path',
+          required: true,
+        });
       }
     }
 
@@ -117,7 +139,12 @@ export class Transformer {
     if (api.requestBody?.content?.['application/json']?.schema?.ref) {
       const ref = api.requestBody.content['application/json'].schema.ref;
       importTypes.add(ref);
-      params.push({ name: 'data', type: ref, in: 'body', required: api.requestBody.required ?? true });
+      params.push({
+        name: 'data',
+        type: ref,
+        in: 'body',
+        required: api.requestBody.required ?? true,
+      });
     }
 
     // --- Query Params ---
@@ -129,21 +156,23 @@ export class Transformer {
 
     // 生成签名
     const signature = params
-      .map(p => `${p.name}${p.required ? '' : '?'}: ${p.type}`)
+      .map((p) => `${p.name}${p.required ? '' : '?'}: ${p.type}`)
       .join(', ');
 
     return {
       params,
       signature,
-      hasPath: params.some(p => p.in === 'path'),
-      hasBody: params.some(p => p.in === 'body'),
-      hasQuery: params.some(p => p.in === 'query')
+      hasPath: params.some((p) => p.in === 'path'),
+      hasBody: params.some((p) => p.in === 'body'),
+      hasQuery: params.some((p) => p.in === 'query'),
     };
   }
 
-  private mapSchemaTypeToTs(prop: any): string {
-    if (prop.type === 'integer' || prop.type === 'number') return 'number';
-    if (prop.type === 'boolean') return 'boolean';
+  private mapSchemaTypeToTs(prop: unknown): string {
+    const typedProp = prop as { type?: string };
+    if (typedProp.type === 'integer' || typedProp.type === 'number')
+      return 'number';
+    if (typedProp.type === 'boolean') return 'boolean';
     return 'string';
   }
 }

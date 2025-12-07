@@ -26,10 +26,14 @@ export class Generator {
     await fs.ensureDir(output.typeDir);
 
     const isSeparateMode = output.separateTypes === true;
-    const interfaceExportMode = (data.metadata?.options as OpenAPIOptions).codeGeneration?.interfaceExportMode || 'export';
+    const interfaceExportMode =
+      (data.metadata?.options as OpenAPIOptions).codeGeneration
+        ?.interfaceExportMode || 'export';
     const ext = interfaceExportMode === 'declare' ? '.d.ts' : '.ts';
 
-    console.log(`📦 Generating Types (Separate Mode: ${isSeparateMode}, Extension: ${ext})...`);
+    console.log(
+      `📦 Generating Types (Separate Mode: ${isSeparateMode}, Extension: ${ext})...`,
+    );
 
     if (!isSeparateMode) {
       // Global Logic ...
@@ -39,29 +43,38 @@ export class Generator {
         code: allCode,
         isGlobal: true,
         name: 'index',
-        config: this.config.globalContext
+        config: this.config.globalContext,
       });
       await this.writeFile(path.join(output.typeDir, `index${ext}`), rendered);
-
     } else {
       // Separate Logic ...
       await fs.emptyDir(output.typeDir);
       const entries = Object.entries(data.interfaces);
 
-      await Promise.all(entries.map(async ([name, code]) => {
-        const rendered = await this.renderTemplate('type', {
-          code: code,
-          isGlobal: false,
-          name: name,
-          config: this.config.globalContext
-        });
-        await this.writeFile(path.join(output.typeDir, `${name}${ext}`), rendered);
-      }));
+      await Promise.all(
+        entries.map(async ([name, code]) => {
+          const rendered = await this.renderTemplate('type', {
+            code: code,
+            isGlobal: false,
+            name: name,
+            config: this.config.globalContext,
+          });
+          await this.writeFile(
+            path.join(output.typeDir, `${name}${ext}`),
+            rendered,
+          );
+        }),
+      );
 
       // 生成一个 index.ts 汇总导出 (declare 模式下不需要)
       if (interfaceExportMode !== 'declare') {
-        const exportAll = entries.map(([name]) => `export * from './${name}';`).join('\n');
-        await this.writeFile(path.join(output.typeDir, `index${ext}`), exportAll);
+        const exportAll = entries
+          .map(([name]) => `export * from './${name}';`)
+          .join('\n');
+        await this.writeFile(
+          path.join(output.typeDir, `index${ext}`),
+          exportAll,
+        );
       }
     }
   }
@@ -69,8 +82,10 @@ export class Generator {
   private async generateApis(data: StandardOutput) {
     const { output } = this.config;
     await fs.ensureDir(output.apiDir);
-    const groups: Record<string, any[]> = {};
-    data.apis.forEach(api => {
+    const groups: Record<string, StandardOutput['apis']> = {};
+
+    console.log('📦 Generating API Files...');
+    data.apis.forEach((api) => {
       const fp = api.category.filePath;
       if (!groups[fp]) groups[fp] = [];
       groups[fp].push(api);
@@ -82,7 +97,7 @@ export class Generator {
         fileData,
         filePath,
         output.typeDir,
-        output.apiDir
+        output.apiDir,
       );
       const code = await this.renderTemplate('api', viewModel);
       const absPath = path.join(output.apiDir, filePath);
@@ -97,18 +112,24 @@ export class Generator {
       if (await fs.pathExists(userPath)) return fs.readFile(userPath, 'utf-8');
     }
     // 回退到默认 (type.ejs 现在也存在了)
-    return fs.readFile(path.join(getPackageTemplatesDir(), `${type}.ejs`), 'utf-8');
+    return fs.readFile(
+      path.join(getPackageTemplatesDir(), `${type}.ejs`),
+      'utf-8',
+    );
   }
 
-  private async renderTemplate(type: 'api' | 'type', data: any) {
+  private async renderTemplate(type: 'api' | 'type', data: object) {
     const tmpl = await this.getTemplateContent(type);
-    return ejs.render(tmpl, data);
+    return ejs.render(tmpl, data, { async: false });
   }
 
   private async writeFile(filePath: string, content: string) {
     await fs.ensureDir(path.dirname(filePath));
     try {
-      const formatted = await prettier.format(content, { parser: 'typescript', singleQuote: true });
+      const formatted = await prettier.format(content, {
+        parser: 'typescript',
+        singleQuote: true,
+      });
       await fs.writeFile(filePath, formatted);
     } catch {
       await fs.writeFile(filePath, content);

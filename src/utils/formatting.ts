@@ -12,7 +12,7 @@ export function extractRefTypes(typeStr: string): string[] {
 export function toCamelCase(str: string): string {
   return str
     .replace(/[^a-zA-Z0-9]+(.)/g, (_, chr) => chr.toUpperCase())
-    .replace(/^[A-Z]/, c => c.toLowerCase());
+    .replace(/^[A-Z]/, (c) => c.toLowerCase());
 }
 
 export function toPascalCase(str: string): string {
@@ -22,6 +22,6 @@ export function toPascalCase(str: string): string {
 
 export function toSnakeCase(str: string): string {
   return str
-    .replace(/\.?([A-Z]+)/g, (x, y) => "_" + y.toLowerCase())
-    .replace(/^_/, "");
+    .replace(/\.?([A-Z]+)/g, (x, y) => '_' + y.toLowerCase())
+    .replace(/^_/, '');
 }
