@@ -14,6 +14,12 @@ export interface UserConfig {
    */
   mode?: 'openapi' | 'apifox';
 
+  /**
+   * 生成的 API 方法名称格式
+   * @default 'camelCase'
+   */
+  methodNameCase?: 'camelCase' | 'PascalCase' | 'snake_case';
+
   /** 透传给 api-codegen-universal 的解析配置 */
   requestConfig?: OpenAPIOptions;
   output: {

@@ -11,7 +11,7 @@ import { defineConfig } from 'api-codegen-runner';
 
 export default defineConfig({
   // Option 1: OpenAPI Source (URL or File Path)
-  input: 'https://petstore.swagger.io/v2/swagger.json',
+  input: 'https://petstore3.swagger.io/api/v3/openapi.json',
 
   // Option 2: Apifox Source (Uncomment to use)
   /*
@@ -21,16 +21,17 @@ export default defineConfig({
   },
   */
 
+  // Generated API method name format
+  methodNameCase: 'PascalCase', // 'camelCase' | 'PascalCase' | 'snake_case'
+
   // Options passed to the underlying parser (api-codegen-universal)
   requestConfig: {
-    // 路径分类配置
     pathClassification: {
       outputPrefix: 'api',
       // commonPrefix: '/api/v1',
     },
-    // 代码生成选项
     codeGeneration: {
-      parameterNamingStyle: 'camelCase', // 'PascalCase' | 'camelCase' | 'snake_case'
+      parameterNamingStyle: 'PascalCase', // 'PascalCase' | 'camelCase' | 'snake_case'
       interfaceExportMode: 'export', // 接口导出方式，export | declare
       output: {
         schemas: true,
@@ -86,8 +87,6 @@ export async function initCommand() {
     const src = getPackageTemplatesDir();
     const dest = path.join(cwd, 'templates');
 
-    // [安全检查] 防止在开发项目根目录下运行时报错
-    // 如果源路径和目标路径解析后相同，说明正在本项目内测试，跳过复制
     if (path.resolve(src) === path.resolve(dest)) {
       console.log(chalk.yellow('⚠️  You are in the project root. Templates already exist. Skipping copy.'));
       return;

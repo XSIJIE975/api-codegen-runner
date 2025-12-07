@@ -2,7 +2,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import ejs from 'ejs';
 import prettier from 'prettier';
-import type { StandardOutput } from 'api-codegen-universal';
+import type { StandardOutput, OpenAPIOptions } from 'api-codegen-universal';
 import { UserConfig } from '../types';
 import { Transformer } from './transformer';
 import { getCwd, getPackageTemplatesDir } from '../utils/paths';
@@ -11,7 +11,7 @@ export class Generator {
   private transformer: Transformer;
 
   constructor(private config: UserConfig) {
-    this.transformer = new Transformer(config.globalContext);
+    this.transformer = new Transformer(config);
   }
 
   async generate(data: StandardOutput) {
@@ -26,8 +26,10 @@ export class Generator {
     await fs.ensureDir(output.typeDir);
 
     const isSeparateMode = output.separateTypes === true;
+    const interfaceExportMode = (data.metadata?.options as OpenAPIOptions).codeGeneration?.interfaceExportMode || 'export';
+    const ext = interfaceExportMode === 'declare' ? '.d.ts' : '.ts';
 
-    console.log(`📦 Generating Types (Separate Mode: ${isSeparateMode})...`);
+    console.log(`📦 Generating Types (Separate Mode: ${isSeparateMode}, Extension: ${ext})...`);
 
     if (!isSeparateMode) {
       // Global Logic ...
@@ -39,7 +41,7 @@ export class Generator {
         name: 'index',
         config: this.config.globalContext
       });
-      await this.writeFile(path.join(output.typeDir, 'index.ts'), rendered);
+      await this.writeFile(path.join(output.typeDir, `index${ext}`), rendered);
 
     } else {
       // Separate Logic ...
@@ -53,12 +55,14 @@ export class Generator {
           name: name,
           config: this.config.globalContext
         });
-        await this.writeFile(path.join(output.typeDir, `${name}.ts`), rendered);
+        await this.writeFile(path.join(output.typeDir, `${name}${ext}`), rendered);
       }));
 
-      // 生成一个 index.ts 汇总导出
-      const exportAll = entries.map(([name]) => `export * from './${name}';`).join('\n');
-      await this.writeFile(path.join(output.typeDir, 'index.ts'), exportAll);
+      // 生成一个 index.ts 汇总导出 (declare 模式下不需要)
+      if (interfaceExportMode !== 'declare') {
+        const exportAll = entries.map(([name]) => `export * from './${name}';`).join('\n');
+        await this.writeFile(path.join(output.typeDir, `index${ext}`), exportAll);
+      }
     }
   }
 

@@ -1,4 +1,18 @@
-node_modules
-dist
+# Local
 .DS_Store
-*.log
+*.local
+*.log*
+
+# Dist
+node_modules
+dist/
+storybook-static
+
+# Build cache
+.rslib/
+*.tsbuildinfo
+
+# IDE
+.vscode/*
+!.vscode/extensions.json
+.idea

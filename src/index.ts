@@ -16,7 +16,6 @@ export function ApiCodegenPlugin(inlineConfig?: Partial<UserConfig>): any {
   const runCodegen = async () => {
     const loggerPrefix = chalk.cyan('[api-codegen]');
     try {
-      // 这里的 cache: false 很重要，确保每次都读取最新的配置
       const { config } = await loadConfig<UserConfig>({
         sources: [{ files: 'codegen.config', extensions: ['ts', 'js'] }],
         merge: false,

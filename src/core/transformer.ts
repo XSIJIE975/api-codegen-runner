@@ -1,10 +1,10 @@
 import path from 'path';
 import type { StandardOutput, ApiDefinition } from 'api-codegen-universal';
-import type { ApiFileViewModel, ApiFunctionViewModel, FunctionParam } from '../types';
-import { extractRefTypes } from '../utils/formatting';
+import type { ApiFileViewModel, ApiFunctionViewModel, FunctionParam, UserConfig } from '../types';
+import { extractRefTypes, toCamelCase, toPascalCase, toSnakeCase } from '../utils/formatting';
 
 export class Transformer {
-  constructor(private globalContext: Record<string, any> = {}) {}
+  constructor(private config: UserConfig) {}
 
   transform(
     data: StandardOutput,
@@ -26,11 +26,24 @@ export class Transformer {
       // 3. 参数解析 (传入 schemas 以便展开)
       const { params, signature, hasPath, hasQuery, hasBody } = this.resolveParameters(api, schemas, importTypes);
 
+      // 4. 方法名格式化
+      let name = api.operationId;
+      const caseStyle = this.config.methodNameCase || 'PascalCase';
+      if (caseStyle === 'camelCase') name = toCamelCase(name);
+      else if (caseStyle === 'PascalCase') name = toPascalCase(name);
+      else if (caseStyle === 'snake_case') name = toSnakeCase(name);
+
+      // 5. 描述信息
+      const descParts = [];
+      if (api.summary) descParts.push(api.summary);
+      if (api.description) descParts.push(api.description);
+      const description = descParts.join('\n * ');
+
       return {
-        name: api.operationId,
+        name,
         method: api.method.toLowerCase(),
         url,
-        description: '', // 你的源码没怎么处理 summary，这里留空或后续优化
+        description,
         responseType,
         hasPathParams: hasPath,
         hasQueryParams: hasQuery,
@@ -54,7 +67,7 @@ export class Transformer {
         types: Array.from(importTypes).sort(),
         relativePath: relativePathToTypes
       },
-      config: this.globalContext,
+      config: this.config.globalContext || {},
       functions
     };
   }
