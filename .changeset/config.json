@@ -3,7 +3,7 @@
   "changelog": [
     "@changesets/changelog-github",
     {
-      "repo": "XSIJIE975/api-codegen-universal"
+      "repo": "XSIJIE975/api-codegen-runner"
     }
   ],
   "commit": false,
