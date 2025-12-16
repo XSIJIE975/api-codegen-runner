@@ -1,5 +1,11 @@
 # api-codegen-runner
 
+## 0.2.0
+
+### Minor Changes
+
+- [`762449c`](https://github.com/XSIJIE975/api-codegen-runner/commit/762449c043554c2d5123635ad34f6683da57bc7c) Thanks [@XSIJIE975](https://github.com/XSIJIE975)! - update(dependencies): 更新 `api-codegen-universal` 版本
+
 ## 0.1.0
 
 ### Minor Changes
