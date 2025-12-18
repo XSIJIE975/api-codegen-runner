@@ -18,6 +18,13 @@
      - false: 生成特定的类型文件
      
   4. config (Object): 全局上下文
+
+  5. utils (对象) - 实用工具函数
+     - utils.camelCase(str): 转换为小驼峰命名 (user-name -> userName)
+     - utils.kebabCase(str): 转换为短横线命名 (userName -> user-name)
+     - utils.pascalCase(str): 转换为帕斯卡命名 (user_name -> UserName)
+     - utils.upperFirst(str): 首字母大写 (userName -> UserName)
+     - utils.commentBlock(str): 生成格式化的 /** ... */ 注释块
   ========================================================================
 %>
 <%# 这里可以放通用的文件头，比如 eslint-disable %>

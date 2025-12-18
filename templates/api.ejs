@@ -36,6 +36,13 @@
   4. config (对象)
      - 映射自 codegen.config.ts 中的 `globalContext`
      - 例如 config.importRequestStr
+
+  5. utils (对象) - 实用工具函数 (基于 lodash-es)
+     - utils.camelCase(str): 转换为小驼峰命名 (user-name -> userName)
+     - utils.kebabCase(str): 转换为短横线命名 (userName -> user-name)
+     - utils.pascalCase(str): 转换为帕斯卡命名 (user_name -> UserName)
+     - utils.upperFirst(str): 首字母大写 (userName -> UserName)
+     - utils.commentBlock(str): 生成格式化的 /** ... */ 注释块
      
   ========================================================================
 %>
