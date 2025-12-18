@@ -1,4 +1,5 @@
 import path from 'path';
+import { camelCase as toCamelCase, snakeCase as toSnakeCase } from 'lodash-es';
 import type { StandardOutput, ApiDefinition } from 'api-codegen-universal';
 import type {
   ApiFileViewModel,
@@ -6,12 +7,7 @@ import type {
   FunctionParam,
   UserConfig,
 } from '../types';
-import {
-  extractRefTypes,
-  toCamelCase,
-  toPascalCase,
-  toSnakeCase,
-} from '../utils/formatting';
+import { extractRefTypes, toPascalCase } from '../utils/formatting';
 
 export class Transformer {
   constructor(private config: UserConfig) {}
@@ -31,7 +27,9 @@ export class Transformer {
 
       // 2. 响应类型解析
       const responseType = this.resolveResponseType(api);
-      extractRefTypes(responseType).forEach((t: string) => importTypes.add(t));
+      extractRefTypes(responseType).forEach((t: string) => {
+        importTypes.add(t);
+      });
 
       // 3. 参数解析 (传入 schemas 以便展开)
       const { params, signature, hasPath, hasQuery, hasBody } =
@@ -110,8 +108,6 @@ export class Transformer {
   } {
     const params: FunctionParam[] = [];
 
-    // --- Path Params ---
-    // 你的库生成的结构: parameters.path = { type: 'ref', ref: 'GetUser_Path_Params' }
     if (api.parameters?.path?.ref) {
       const ref = api.parameters.path.ref;
       const schema = schemas[ref];
@@ -130,7 +126,7 @@ export class Transformer {
         );
       } else {
         // 兜底: 找不到 schema 就把整个对象当参数
-        importTypes.add(ref);
+        extractRefTypes(ref).forEach((t) => importTypes.add(t));
         params.push({
           name: 'pathParams',
           type: ref,
@@ -143,7 +139,7 @@ export class Transformer {
     // --- Body Params ---
     if (api.requestBody?.content?.['application/json']?.schema?.ref) {
       const ref = api.requestBody.content['application/json'].schema.ref;
-      importTypes.add(ref);
+      extractRefTypes(ref).forEach((t) => importTypes.add(t));
       params.push({
         name: 'data',
         type: ref,
@@ -155,7 +151,7 @@ export class Transformer {
     // --- Query Params ---
     if (api.parameters?.query?.ref) {
       const ref = api.parameters.query.ref;
-      importTypes.add(ref);
+      extractRefTypes(ref).forEach((t) => importTypes.add(t));
       params.push({ name: 'params', type: ref, in: 'query', required: false });
     }
 
