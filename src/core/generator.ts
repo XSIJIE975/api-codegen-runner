@@ -1,24 +1,57 @@
+import { performance } from 'perf_hooks';
 import fs from 'fs-extra';
 import path from 'path';
 import ejs from 'ejs';
 import prettier from 'prettier';
+import { camelCase, kebabCase, upperFirst } from 'lodash-es';
 import type { StandardOutput, OpenAPIOptions } from 'api-codegen-universal';
-import { UserConfig } from '../types';
+import { UserConfig, ApiFileViewModel } from '../types';
 import { Transformer } from './transformer';
 import { getCwd, getPackageTemplatesDir } from '../utils/paths';
+import { logger } from '../utils/logger';
+import { toPascalCase as pascalCase } from '../utils/formatting';
 
 export class Generator {
   private transformer: Transformer;
+  private templateCache: Map<string, Promise<string>> = new Map();
 
   constructor(private config: UserConfig) {
     this.transformer = new Transformer(config);
   }
 
   async generate(data: StandardOutput) {
-    console.log('🚀 Generating code...');
+    const startTime = performance.now();
+    logger.info('Generating code...');
+
+    // 1. 清理输出目录
+    if (this.config.clean) {
+      logger.info('Cleaning output directories...');
+      await fs.emptyDir(this.config.output.apiDir);
+      if (this.config.output.separateTypes) {
+        await fs.emptyDir(this.config.output.typeDir);
+      }
+    }
+
+    // 2. 生成类型文件
     await this.generateInterfaces(data);
+
+    // 3. 生成 API 文件
     await this.generateApis(data);
-    console.log('✨ Done!');
+
+    // 4. 执行 onComplete 钩子
+    if (this.config.hooks?.onComplete) {
+      logger.info('Running onComplete hook...');
+      try {
+        await this.config.hooks.onComplete(this.config);
+      } catch (error) {
+        logger.error('Error in onComplete hook:', error);
+      }
+    }
+
+    const endTime = performance.now();
+    const duration = (endTime - startTime).toFixed(2);
+
+    logger.success(`Generation complete in ${duration}ms`);
   }
 
   private async generateInterfaces(data: StandardOutput) {
@@ -27,12 +60,12 @@ export class Generator {
 
     const isSeparateMode = output.separateTypes === true;
     const interfaceExportMode =
-      (data.metadata?.options as OpenAPIOptions).codeGeneration
+      (data.metadata?.options as OpenAPIOptions)?.codeGeneration
         ?.interfaceExportMode || 'export';
     const ext = interfaceExportMode === 'declare' ? '.d.ts' : '.ts';
 
-    console.log(
-      `📦 Generating Types (Separate Mode: ${isSeparateMode}, Extension: ${ext})...`,
+    logger.info(
+      `Generating Types (Separate Mode: ${isSeparateMode}, Extension: ${ext})...`,
     );
 
     if (!isSeparateMode) {
@@ -51,6 +84,7 @@ export class Generator {
       await fs.emptyDir(output.typeDir);
       const entries = Object.entries(data.interfaces);
 
+      // 注意：这里使用了 Promise.all 并发执行，只有 Promise 缓存才能防止日志重复
       await Promise.all(
         entries.map(async ([name, code]) => {
           const rendered = await this.renderTemplate('type', {
@@ -66,7 +100,6 @@ export class Generator {
         }),
       );
 
-      // 生成一个 index.ts 汇总导出 (declare 模式下不需要)
       if (interfaceExportMode !== 'declare') {
         const exportAll = entries
           .map(([name]) => `export * from './${name}';`)
@@ -80,55 +113,124 @@ export class Generator {
   }
 
   private async generateApis(data: StandardOutput) {
-    const { output } = this.config;
+    const { output, debug } = this.config;
     await fs.ensureDir(output.apiDir);
-    const groups: Record<string, StandardOutput['apis']> = {};
 
-    console.log('📦 Generating API Files...');
+    const groups: Record<string, StandardOutput['apis']> = {};
+    logger.info('Grouping APIs by file path...');
     data.apis.forEach((api) => {
       const fp = api.category.filePath;
       if (!groups[fp]) groups[fp] = [];
       groups[fp].push(api);
     });
 
+    const debugMap: Record<string, ApiFileViewModel> = {};
+
     for (const [filePath, fileApis] of Object.entries(groups)) {
       const fileData = { ...data, apis: fileApis };
+
       const viewModel = this.transformer.transform(
         fileData,
         filePath,
         output.typeDir,
         output.apiDir,
       );
+
+      if (debug) {
+        debugMap[filePath] = viewModel;
+      }
+
       const code = await this.renderTemplate('api', viewModel);
       const absPath = path.join(output.apiDir, filePath);
       await this.writeFile(absPath, code);
     }
+
+    if (debug) {
+      await this.saveDebugInfo(debugMap);
+    }
   }
 
-  private async getTemplateContent(type: 'api' | 'type') {
-    // 优先读用户配置
-    if (this.config.templates?.[type]) {
-      const userPath = path.resolve(getCwd(), this.config.templates[type]!);
-      if (await fs.pathExists(userPath)) return fs.readFile(userPath, 'utf-8');
+  private async saveDebugInfo(debugMap: Record<string, ApiFileViewModel>) {
+    const { output } = this.config;
+    const debugFilePath = path.join(output.apiDir, 'debug-manifest.json');
+
+    const debugOutput = {
+      __metadata__: {
+        generator: 'api-codegen-runner',
+        generatedAt: new Date().toLocaleString(),
+        warning:
+          'DO NOT EDIT THIS FILE. It is auto-generated for debugging purposes.',
+        description:
+          'This file contains the ViewModel data passed to EJS templates for each API file.',
+        totalFiles: Object.keys(debugMap).length,
+      },
+      files: debugMap,
+    };
+
+    try {
+      await fs.writeJSON(debugFilePath, debugOutput, { spaces: 2 });
+      logger.debug(`Debug manifest saved to: ${debugFilePath}`);
+    } catch (error) {
+      logger.error('Failed to save debug info:', error);
     }
-    // 回退到默认 (type.ejs 现在也存在了)
-    return fs.readFile(
-      path.join(getPackageTemplatesDir(), `${type}.ejs`),
-      'utf-8',
-    );
+  }
+
+  private getTemplateContent(type: 'api' | 'type'): Promise<string> {
+    if (!this.templateCache.has(type)) {
+      const promise = (async () => {
+        let content = '';
+        const userTemplatePath = this.config.templates?.[type];
+
+        if (userTemplatePath) {
+          const absPath = path.resolve(getCwd(), userTemplatePath);
+          if (await fs.pathExists(absPath)) {
+            content = await fs.readFile(absPath, 'utf-8');
+          } else {
+            logger.warn(`Custom template not found at: ${absPath}`);
+            logger.warn(`Falling back to built-in ${type} template.`);
+          }
+        }
+
+        if (!content) {
+          const defaultPath = path.join(
+            getPackageTemplatesDir(),
+            `${type}.ejs`,
+          );
+          content = await fs.readFile(defaultPath, 'utf-8');
+        }
+        return content;
+      })();
+
+      this.templateCache.set(type, promise);
+    }
+    return this.templateCache.get(type)!;
   }
 
   private async renderTemplate(type: 'api' | 'type', data: object) {
     const tmpl = await this.getTemplateContent(type);
-    return ejs.render(tmpl, data, { async: false });
+
+    const templateData = {
+      ...data,
+      utils: {
+        camelCase,
+        kebabCase,
+        pascalCase,
+        upperFirst,
+        commentBlock: (text: string) => `/**\n * ${text}\n */`,
+      },
+    };
+
+    return ejs.render(tmpl, templateData, { async: false });
   }
 
   private async writeFile(filePath: string, content: string) {
     await fs.ensureDir(path.dirname(filePath));
     try {
+      // 读取实际调用方的 Prettier 配置进行格式化
+      const userOptions = (await prettier.resolveConfig(filePath)) || {};
       const formatted = await prettier.format(content, {
+        ...userOptions,
         parser: 'typescript',
-        singleQuote: true,
       });
       await fs.writeFile(filePath, formatted);
     } catch {

@@ -5,6 +5,10 @@ import type {
 } from 'api-codegen-universal';
 
 export interface UserConfig {
+  /** 是否开启调试模式，会输出 debug 文件 */
+  debug?: boolean;
+  /** 生成前是否清理输出目录 */
+  clean?: boolean;
   /**
    * 数据源
    * - 字符串: 视为 OpenAPI URL 或 本地文件路径
@@ -29,7 +33,7 @@ export interface UserConfig {
   output: {
     apiDir: string;
     typeDir: string;
-    /** 是否将类型生成为独立文件 (默认为 false: 生成单个 index.ts) */
+    /** 是否将类型生成为独立文件 (默认为 false: 生成单个文件) */
     separateTypes?: boolean;
   };
   templates?: {
@@ -37,6 +41,14 @@ export interface UserConfig {
     type?: string;
   };
   globalContext?: Record<string, unknown>;
+  /** 生命周期钩子 */
+  hooks?: {
+    /**
+     * 生成结束后的回调
+     * @param config 当前的完整配置
+     */
+    onComplete?: (config: UserConfig) => void | Promise<void>;
+  };
 }
 
 export interface ApiFileViewModel {

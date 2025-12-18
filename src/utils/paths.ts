@@ -9,6 +9,5 @@ export function getCwd() {
 }
 
 export function getPackageTemplatesDir() {
-  // 假设打包后结构: dist/index.js -> templates/
   return path.resolve(__dirname, '../templates');
 }

@@ -4,7 +4,7 @@ import type {
   ApifoxConfig,
   InputSource,
 } from 'api-codegen-universal';
-import chalk from 'chalk';
+import { logger } from '../utils/logger';
 import { UserConfig } from '../types';
 
 export class DataLoader {
@@ -25,28 +25,27 @@ export class DataLoader {
       }
     }
 
-    console.log(chalk.blue(`🚀 Mode: [${adapterType}]`));
+    logger.info(`Using adapter type: ${adapterType}`);
 
     // 2. 根据模式调用不同的 Adapter
     let data;
     try {
       if (adapterType === 'apifox') {
-        console.log(
-          `⏳ Fetching from Apifox Project: ${(input as ApifoxConfig).projectId}...`,
+        logger.info(
+          `Fetching from Apifox Project: ${(input as ApifoxConfig).projectId}...`,
         );
         const adapter = new ApifoxAdapter();
         data = await adapter.parse(input as ApifoxConfig, requestConfig);
       } else {
-        console.log(`⏳ Fetching OpenAPI Schema: ${input}...`);
+        logger.info(`Fetching OpenAPI Schema: ${input}...`);
         const adapter = new OpenAPIAdapter();
         data = await adapter.parse(input as InputSource, requestConfig);
       }
 
-      console.log(chalk.green(`✅ Schema loaded successfully.`));
+      logger.success('Schema loaded successfully.');
       return data as StandardOutput;
     } catch (error: unknown) {
-      console.error(chalk.red('❌ Data loading failed:'));
-      console.error(error);
+      logger.error('Data loading failed:', error);
       throw error;
     }
   }
