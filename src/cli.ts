@@ -2,6 +2,7 @@ import fs from 'fs';
 import { Command } from 'commander';
 import { loadConfig } from 'unconfig';
 import { initCommand } from './commands/init';
+import { updateCommand } from './commands/update';
 import { DataLoader } from './core/loader';
 import { Generator } from './core/generator';
 import { validateConfig } from './core/validator';
@@ -12,6 +13,7 @@ const program = new Command();
 program.name('api-codegen-runner').version('1.0.0');
 
 program.command('init').action(initCommand);
+program.command('update').action(updateCommand);
 
 program
   .command('generate', { isDefault: true })
