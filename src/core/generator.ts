@@ -192,6 +192,7 @@ export class Generator {
         }
 
         if (!content) {
+          logger.info(`Using built-in ${type} template.`);
           const defaultPath = path.join(
             getPackageTemplatesDir(),
             `${type}.ejs`,
