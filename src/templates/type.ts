@@ -1,7 +1,10 @@
-<%# 
+import pkg from '../../package.json';
+
+export function generateTypeTemplate(): string {
+  return `<%# 
   ========================================================================
   类型模板文档
-  @version 0.2.0
+  @version ${pkg.version}
 
   [警告] 请勿手动修改 @version 字段，该字段用于 CLI 自动更新检测。
   [提示] 如果你需要自定义模板，请确保保留此头部元数据。
@@ -39,3 +42,5 @@
 <%- config.importTypeHeaderStr || '' %>
 
 <%- code %>
+`;
+}

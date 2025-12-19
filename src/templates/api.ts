@@ -1,7 +1,10 @@
-<%# 
+import pkg from '../../package.json';
+
+export function generateApiTemplate(): string {
+  return `<%# 
   ========================================================================
   API 模板文档
-  @version 0.2.0
+  @version ${pkg.version}
 
   [警告] 请勿手动修改 @version 字段，该字段用于 CLI 自动更新检测。
   [提示] 如果你需要自定义模板，请确保保留此头部元数据。
@@ -16,7 +19,7 @@
   2. functions (对象数组) - 每个函数对应一个 API 端点
      - fn.name (string): 函数名称。例如 'getUserById'
      - fn.method (string): HTTP 方法 (小写)。例如 'get', 'post'
-     - fn.url (string): 带有模板字面量的请求 URL。例如 `/users/${id}`
+     - fn.url (string): 带有模板字面量的请求 URL。例如 \`/users/\${id}\`
      - fn.description (string): JSDoc 描述或摘要。
      - fn.responseType (string): TypeScript 返回类型。例如 'ApiSuccessResponse<UserVo>'
      
@@ -38,7 +41,7 @@
   3. interfaceExportMode (string): 'export' | 'declare'
 
   4. config (对象)
-     - 映射自 codegen.config.ts 中的 `globalContext`
+     - 映射自 codegen.config.ts 中的 \`globalContext\`
      - 例如 config.importRequestStr
 
   5. utils (对象) - 实用工具函数 (基于 lodash-es)
@@ -69,9 +72,11 @@ import type {
  * <%= fn.description %>
  */
 export function <%= fn.name %>(<%- fn.paramsSignature %>) {
-  return request.<%= fn.method %><<%- fn.responseType %>>(`<%= fn.url %>`, {
+  return request.<%= fn.method %><<%- fn.responseType %>>(\`<%= fn.url %>\`, {
     <% if (fn.hasBody) { %>data,<% } %>
     <% if (fn.hasQueryParams) { %>params,<% } %>
   });
 }
 <% }) %>
+`;
+}

@@ -1,8 +1,9 @@
 import { loadConfig } from 'unconfig';
-import chalk from 'chalk';
-import type { ViteDevServer } from 'vite';
+import type { ViteDevServer, Plugin } from 'vite';
 import { DataLoader } from './core/loader';
 import { Generator } from './core/generator';
+import { validateConfig } from './core/validator';
+import { logger } from './utils/logger';
 import { UserConfig } from './types';
 
 export * from './types';
@@ -13,7 +14,6 @@ export function defineConfig(config: UserConfig): UserConfig {
 
 export function ApiCodegenPlugin(inlineConfig?: Partial<UserConfig>) {
   const runCodegen = async () => {
-    const loggerPrefix = chalk.cyan('[api-codegen]');
     try {
       const { config } = await loadConfig<UserConfig>({
         sources: [{ files: 'codegen.config', extensions: ['ts', 'js'] }],
@@ -24,24 +24,21 @@ export function ApiCodegenPlugin(inlineConfig?: Partial<UserConfig>) {
 
       if (!finalConfig) return;
 
-      console.log(
-        `${loggerPrefix} ${chalk.blue('Configuration loaded/updated. Checking API...')}`,
-      );
+      const validConfig = await validateConfig(finalConfig);
+
+      logger.info('Configuration loaded/updated. Checking API...');
 
       const loader = new DataLoader();
-      const data = await loader.load(finalConfig);
+      const data = await loader.load(validConfig);
 
-      const generator = new Generator(finalConfig);
+      const generator = new Generator(validConfig);
       await generator.generate(data);
-
-      console.log(`${loggerPrefix} ${chalk.green('Generation success!')}`);
     } catch (error: unknown) {
-      console.error(`${loggerPrefix} ${chalk.red('Generation failed:')}`);
-      console.error(error);
+      logger.error('Generation failed:', error);
     }
   };
 
-  return {
+  const plugin: Plugin = {
     name: 'vite-plugin-api-codegen',
     apply: 'serve' as const,
 
@@ -52,23 +49,17 @@ export function ApiCodegenPlugin(inlineConfig?: Partial<UserConfig>) {
     configureServer(server: ViteDevServer) {
       server.watcher.on('change', async (file) => {
         if (file.includes('codegen.config')) {
-          console.log(
-            chalk.yellow(
-              '\n[api-codegen] Config change detected. Reloading...',
-            ),
-          );
+          logger.info('Configuration file changed. Reloading...');
           await runCodegen();
         }
 
         if (file.endsWith('.ejs')) {
-          console.log(
-            chalk.yellow(
-              '\n[api-codegen] Template change detected. Reloading...',
-            ),
-          );
+          logger.info('Template file changed. Regenerating...');
           await runCodegen();
         }
       });
     },
   };
+
+  return plugin;
 }

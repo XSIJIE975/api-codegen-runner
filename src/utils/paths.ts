@@ -9,6 +9,9 @@ export function getCwd() {
 }
 
 export function getPackageTemplatesDir() {
-  // 假设打包后结构: dist/index.js -> templates/
+  if (process.env.TSUP_BUILD) {
+    return path.resolve(process.cwd(), 'templates');
+  }
+
   return path.resolve(__dirname, '../templates');
 }
