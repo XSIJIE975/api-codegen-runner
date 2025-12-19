@@ -46,7 +46,13 @@
      
   ========================================================================
 %>
+<% if (Array.isArray(config.importRequestStr)) { %>
+<% config.importRequestStr.forEach(line => { %>
+<%- line %>
+<% }) %>
+<% } else { %>
 <%- config.importRequestStr %>
+<% } %>
 <% if (typeof interfaceExportMode === 'undefined' || interfaceExportMode === 'export') { %>
 import type { 
 <% imports.types.forEach(t => { %>  <%= t %>,
