@@ -9,5 +9,9 @@ export function getCwd() {
 }
 
 export function getPackageTemplatesDir() {
+  if (process.env.TSUP_BUILD) {
+    return path.resolve(process.cwd(), 'templates');
+  }
+
   return path.resolve(__dirname, '../templates');
 }
