@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       api-codegen-universal:
-        specifier: ^0.5.0
-        version: 0.5.0(ajv@8.17.1)(openapi-types@12.1.3)(typescript@5.9.3)
+        specifier: ^0.6.0
+        version: 0.6.0(ajv@8.17.1)(openapi-types@12.1.3)(typescript@5.9.3)
       chalk:
         specifier: ^5.6.2
         version: 5.6.2
@@ -1079,8 +1079,8 @@ packages:
   any-promise@1.3.0:
     resolution: {integrity: sha512-7UvmKalWRt1wgjL1RrGxoSJW/0QZFIegpeGvZG9kjp8vrRu55XTHbwnqq2GpXm9uLbcuhxm3IqX9OB4MZR1b2A==}
 
-  api-codegen-universal@0.5.0:
-    resolution: {integrity: sha512-yN847kd+0b+ehIyYA3P7hmuSrhhbhGoIVkNcMzWlX/sw3cj2oO9z7DBGUSPvKTeCba+9EgcvOSDru0siy25ZrA==}
+  api-codegen-universal@0.6.0:
+    resolution: {integrity: sha512-OVFszcMZyVmCeaVi2tCnhnHO2vaiUR/9Z84XP6uzqXf6WAsHDAgJza/CRSgYow29AzgTjHBFsUTZt/mBTbjX4Q==}
     peerDependencies:
       typescript: ^5.0.0
 
@@ -3285,7 +3285,7 @@ snapshots:
 
   any-promise@1.3.0: {}
 
-  api-codegen-universal@0.5.0(ajv@8.17.1)(openapi-types@12.1.3)(typescript@5.9.3):
+  api-codegen-universal@0.6.0(ajv@8.17.1)(openapi-types@12.1.3)(typescript@5.9.3):
     dependencies:
       '@apidevtools/swagger-parser': 12.1.0(openapi-types@12.1.3)
       '@redocly/openapi-core': 2.13.0(ajv@8.17.1)
