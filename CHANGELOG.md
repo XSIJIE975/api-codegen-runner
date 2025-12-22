@@ -1,5 +1,11 @@
 # api-codegen-runner
 
+## 0.3.1
+
+### Patch Changes
+
+- [#5](https://github.com/XSIJIE975/api-codegen-runner/pull/5) [`b094f4e`](https://github.com/XSIJIE975/api-codegen-runner/commit/b094f4e30e5f1e00ea83a34ddd76c6660ea5c140) Thanks [@XSIJIE975](https://github.com/XSIJIE975)! - fix: normalize types and update config generator
+
 ## 0.3.0
 
 ### Minor Changes
