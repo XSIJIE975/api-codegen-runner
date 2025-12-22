@@ -7,7 +7,11 @@ import type {
   FunctionParam,
   UserConfig,
 } from '../types';
-import { extractRefTypes, toPascalCase } from '../utils/formatting';
+import {
+  extractRefTypes,
+  toPascalCase,
+  normalizeType,
+} from '../utils/formatting';
 
 export class Transformer {
   constructor(private config: UserConfig) {}
@@ -20,20 +24,22 @@ export class Transformer {
   ): ApiFileViewModel {
     const { apis, schemas } = data;
     const importTypes = new Set<string>();
+    const schemaNames = new Set(Object.keys(schemas || {}));
 
     const functions = apis.map((api) => {
       // 1. URL 处理，如将: /users/{id} -> /users/${id}
       const url = api.path.replace(/\{([^}]+)\}/g, '${$1}');
 
       // 2. 响应类型解析
-      const responseType = this.resolveResponseType(api);
+      let responseType = this.resolveResponseType(api);
+      responseType = normalizeType(responseType, schemaNames);
       extractRefTypes(responseType).forEach((t: string) => {
         importTypes.add(t);
       });
 
       // 3. 参数解析 (传入 schemas 以便展开)
       const { params, signature, hasPath, hasQuery, hasBody } =
-        this.resolveParameters(api, schemas, importTypes);
+        this.resolveParameters(api, schemas, importTypes, schemaNames);
 
       // 4. 方法名格式化
       let name = api.operationId;
@@ -99,6 +105,7 @@ export class Transformer {
     api: ApiDefinition,
     schemas: StandardOutput['schemas'],
     importTypes: Set<string>,
+    schemaNames: Set<string>,
   ): {
     params: FunctionParam[];
     signature: string;
@@ -126,10 +133,11 @@ export class Transformer {
         );
       } else {
         // 兜底: 找不到 schema 就把整个对象当参数
-        extractRefTypes(ref).forEach((t) => importTypes.add(t));
+        const normalizedRef = normalizeType(ref, schemaNames);
+        extractRefTypes(normalizedRef).forEach((t) => importTypes.add(t));
         params.push({
           name: 'pathParams',
-          type: ref,
+          type: normalizedRef,
           in: 'path',
           required: true,
         });
@@ -139,10 +147,11 @@ export class Transformer {
     // --- Body Params ---
     if (api.requestBody?.content?.['application/json']?.schema?.ref) {
       const ref = api.requestBody.content['application/json'].schema.ref;
-      extractRefTypes(ref).forEach((t) => importTypes.add(t));
+      const normalizedRef = normalizeType(ref, schemaNames);
+      extractRefTypes(normalizedRef).forEach((t) => importTypes.add(t));
       params.push({
         name: 'data',
-        type: ref,
+        type: normalizedRef,
         in: 'body',
         required: api.requestBody.required ?? true,
       });
@@ -151,8 +160,14 @@ export class Transformer {
     // --- Query Params ---
     if (api.parameters?.query?.ref) {
       const ref = api.parameters.query.ref;
-      extractRefTypes(ref).forEach((t) => importTypes.add(t));
-      params.push({ name: 'params', type: ref, in: 'query', required: false });
+      const normalizedRef = normalizeType(ref, schemaNames);
+      extractRefTypes(normalizedRef).forEach((t) => importTypes.add(t));
+      params.push({
+        name: 'params',
+        type: normalizedRef,
+        in: 'query',
+        required: false,
+      });
     }
 
     // 生成签名
