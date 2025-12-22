@@ -41,6 +41,38 @@ const TS_BUILTIN_TYPES = new Set([
   'ThisType',
 ]);
 
+const BUILTIN_TYPE_MAP = new Map<string, string>();
+TS_BUILTIN_TYPES.forEach((t) => BUILTIN_TYPE_MAP.set(t.toLowerCase(), t));
+
+/**
+ * 规范化类型字符串
+ * 1. 如果是已存在的 Schema 类型，保持原样
+ * 2. 如果是 TS 内置关键字（忽略大小写），转换为正确的内置类型（如 Unknown -> unknown）
+ * 3. 其他情况保持原样
+ */
+export function normalizeType(
+  typeStr: string,
+  validSchemaNames: Set<string>,
+): string {
+  if (!typeStr) return typeStr;
+
+  return typeStr.replace(/\b[a-zA-Z_][a-zA-Z0-9_]*\b/g, (match) => {
+    // 1. 如果是有效的 Schema 名称，保持原样
+    if (validSchemaNames.has(match)) {
+      return match;
+    }
+
+    // 2. 检查是否为内置类型（忽略大小写）
+    const builtin = BUILTIN_TYPE_MAP.get(match.toLowerCase());
+    if (builtin) {
+      return builtin;
+    }
+
+    // 3. 否则保持原样
+    return match;
+  });
+}
+
 /**
  * 提取类型引用，用于生成 import 语句
  * 例如: "BaseType<UserDto>" -> ["BaseType", "UserDto"]

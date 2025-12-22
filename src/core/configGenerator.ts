@@ -6,6 +6,8 @@ import pkg from '../../package.json';
  * 使用 UserConfig 类型进行约束，确保配置项的正确性
  */
 export const DEFAULT_CONFIG: UserConfig = {
+  clean: true,
+  debug: false,
   input: 'https://petstore3.swagger.io/api/v3/openapi.json',
   methodNameCase: 'PascalCase',
   requestConfig: {
@@ -47,9 +49,11 @@ import { defineConfig } from 'api-codegen-runner';
  * @generated ${date}
  * 
  * API Codegen Configuration
- * Documentation: https://github.com/your-repo/api-codegen-runner
+ * Documentation: https://github.com/XSIJIE975/api-codegen-runner
  */
 export default defineConfig({
+  clean: ${DEFAULT_CONFIG.clean},
+  debug: ${DEFAULT_CONFIG.debug},
   // Option 1: OpenAPI Source (URL or File Path)
   input: '${DEFAULT_CONFIG.input}',
 
@@ -72,7 +76,7 @@ export default defineConfig({
     },
     codeGeneration: {
       parameterNamingStyle: '${DEFAULT_CONFIG.requestConfig?.codeGeneration?.parameterNamingStyle}', // 'PascalCase' | 'camelCase' | 'snake_case'
-      interfaceExportMode: '${DEFAULT_CONFIG.requestConfig?.codeGeneration?.interfaceExportMode}', // 接口导出方式，export | declare
+      interfaceExportMode: '${DEFAULT_CONFIG.requestConfig?.codeGeneration?.interfaceExportMode}', // Interface export mode: 'export' | 'declare'
       output: {
         schemas: ${DEFAULT_CONFIG.requestConfig?.codeGeneration?.output?.schemas},
         interfaces: ${DEFAULT_CONFIG.requestConfig?.codeGeneration?.output?.interfaces},
@@ -95,6 +99,13 @@ export default defineConfig({
   // Global variables injected into templates
   globalContext: {
     importRequestStr: "${DEFAULT_CONFIG.globalContext?.importRequestStr}",
+  },
+
+  // Hooks for custom logic
+  "hooks": {
+    "onComplete": (config) => {
+      // do something after generation completes
+    }
   }
 });
 `.trim();
