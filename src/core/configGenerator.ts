@@ -49,7 +49,7 @@ import { defineConfig } from 'api-codegen-runner';
  * @generated ${date}
  * 
  * API Codegen Configuration
- * Documentation: https://github.com/your-repo/api-codegen-runner
+ * Documentation: https://github.com/XSIJIE975/api-codegen-runner
  */
 export default defineConfig({
   clean: ${DEFAULT_CONFIG.clean},
@@ -76,7 +76,7 @@ export default defineConfig({
     },
     codeGeneration: {
       parameterNamingStyle: '${DEFAULT_CONFIG.requestConfig?.codeGeneration?.parameterNamingStyle}', // 'PascalCase' | 'camelCase' | 'snake_case'
-      interfaceExportMode: '${DEFAULT_CONFIG.requestConfig?.codeGeneration?.interfaceExportMode}', // 接口导出方式，export | declare
+      interfaceExportMode: '${DEFAULT_CONFIG.requestConfig?.codeGeneration?.interfaceExportMode}', // Interface export mode: 'export' | 'declare'
       output: {
         schemas: ${DEFAULT_CONFIG.requestConfig?.codeGeneration?.output?.schemas},
         interfaces: ${DEFAULT_CONFIG.requestConfig?.codeGeneration?.output?.interfaces},
