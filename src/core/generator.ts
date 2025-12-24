@@ -5,7 +5,7 @@ import ejs from 'ejs';
 import prettier from 'prettier';
 import { camelCase, kebabCase, upperFirst } from 'lodash-es';
 import type { StandardOutput, OpenAPIOptions } from 'api-codegen-universal';
-import { UserConfig, ApiFileViewModel } from '../types';
+import { UserConfig, ApiFileViewModel, FunctionParam } from '../types';
 import { Transformer } from './transformer';
 import { getCwd, getPackageTemplatesDir } from '../utils/paths';
 import { logger } from '../utils/logger';
@@ -218,6 +218,49 @@ export class Generator {
         pascalCase,
         upperFirst,
         commentBlock: (text: string) => `/**\n * ${text}\n */`,
+        // 根据 content-type 获取对应的参数
+        getParamByContentType: (
+          allParams: FunctionParam[],
+          contentType: string,
+        ) => {
+          return allParams.find(
+            (p) => p.in === 'body' && p.contentType === contentType,
+          );
+        },
+        // 获取所有非 body 参数（path + query）
+        getNonBodyParams: (allParams: FunctionParam[]) => {
+          return allParams.filter((p) => p.in !== 'body');
+        },
+        // 生成指定 content-type 的参数签名
+        getParamsSignature: (
+          allParams: FunctionParam[],
+          contentType?: string,
+        ) => {
+          const nonBodyParams = allParams.filter((p) => p.in !== 'body');
+          const params = [...nonBodyParams];
+
+          // 如果指定了 contentType，添加对应的 body 参数
+          if (contentType) {
+            const bodyParam = allParams.find(
+              (p) => p.in === 'body' && p.contentType === contentType,
+            );
+            if (bodyParam) {
+              params.push(bodyParam);
+            }
+          }
+
+          return params
+            .map((p) => `${p.name}${p.required ? '' : '?'}: ${p.type}`)
+            .join(', ');
+        },
+        // 获取默认/首选的 content-type（优先 application/json）
+        getPreferredContentType: (bodyContentTypes?: string[]) => {
+          if (!bodyContentTypes || bodyContentTypes.length === 0) return null;
+          const jsonType = bodyContentTypes.find((ct) =>
+            ct.includes('application/json'),
+          );
+          return jsonType || bodyContentTypes[0];
+        },
       },
     };
 

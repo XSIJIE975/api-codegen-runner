@@ -80,6 +80,9 @@ export interface ApiFunctionViewModel {
 
   /** 参数列表，用于模板高级处理 */
   allParams: FunctionParam[];
+
+  /** requestBody 支持的所有 content-type (仅当有 body 参数时存在) */
+  bodyContentTypes?: string[];
 }
 
 export interface FunctionParam {
@@ -87,4 +90,6 @@ export interface FunctionParam {
   type: string;
   in: 'path' | 'query' | 'body';
   required: boolean;
+  /** content-type (仅 body 参数有效，如 'application/json', 'multipart/form-data') */
+  contentType?: string;
 }

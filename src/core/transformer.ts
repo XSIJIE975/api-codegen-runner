@@ -38,8 +38,14 @@ export class Transformer {
       });
 
       // 3. 参数解析 (传入 schemas 以便展开)
-      const { params, signature, hasPath, hasQuery, hasBody } =
-        this.resolveParameters(api, schemas, importTypes, schemaNames);
+      const {
+        params,
+        signature,
+        hasPath,
+        hasQuery,
+        hasBody,
+        bodyContentTypes,
+      } = this.resolveParameters(api, schemas, importTypes, schemaNames);
 
       // 4. 方法名格式化
       let name = api.operationId;
@@ -65,6 +71,7 @@ export class Transformer {
         hasBody: hasBody,
         paramsSignature: signature,
         allParams: params,
+        bodyContentTypes, // 添加支持的所有 content-type
       } as ApiFunctionViewModel;
     });
 
@@ -98,7 +105,21 @@ export class Transformer {
 
   private resolveResponseType(api: ApiDefinition): string {
     const successRes = api.responses['200'] || api.responses['201'];
-    return successRes?.content?.['application/json']?.schema?.ref || 'any';
+    if (!successRes?.content) return 'any';
+
+    // 优先查找 application/json，然后遍历所有 content-type
+    const contentTypes = Object.keys(successRes.content);
+    const jsonType = contentTypes.find((ct) => ct.includes('application/json'));
+
+    if (jsonType) {
+      return successRes.content[jsonType]?.schema?.ref || 'any';
+    }
+
+    // 如果没有 json，返回第一个 content-type 的 ref
+    const firstContentType = contentTypes[0];
+    return firstContentType
+      ? successRes.content[firstContentType]?.schema?.ref || 'any'
+      : 'any';
   }
 
   private resolveParameters(
@@ -112,8 +133,10 @@ export class Transformer {
     hasPath: boolean;
     hasQuery: boolean;
     hasBody: boolean;
+    bodyContentTypes?: string[]; // 添加返回值
   } {
     const params: FunctionParam[] = [];
+    let bodyContentTypes: string[] | undefined = undefined; // 初始化变量
 
     if (api.parameters?.path?.ref) {
       const ref = api.parameters.path.ref;
@@ -145,15 +168,45 @@ export class Transformer {
     }
 
     // --- Body Params ---
-    if (api.requestBody?.content?.['application/json']?.schema?.ref) {
-      const ref = api.requestBody.content['application/json'].schema.ref;
-      const normalizedRef = normalizeType(ref, schemaNames);
-      extractRefTypes(normalizedRef).forEach((t) => importTypes.add(t));
-      params.push({
-        name: 'data',
-        type: normalizedRef,
-        in: 'body',
-        required: api.requestBody.required ?? true,
+    if (api.requestBody?.content) {
+      const contentTypes = Object.keys(api.requestBody.content);
+      bodyContentTypes = contentTypes; // 保存所有 content-type
+
+      // 为每个 content-type 生成对应的参数
+      contentTypes.forEach((contentType) => {
+        const content = api.requestBody!.content![contentType];
+        if (content?.schema?.ref) {
+          const ref = content.schema.ref;
+          const normalizedRef = normalizeType(ref, schemaNames);
+          extractRefTypes(normalizedRef).forEach((t) => importTypes.add(t));
+
+          // 根据 content-type 判断参数名称
+          let paramName: string;
+          if (contentType.includes('application/json')) {
+            paramName = 'data';
+          } else if (contentType.includes('multipart/form-data')) {
+            paramName = 'formData';
+          } else if (
+            contentType.includes('application/x-www-form-urlencoded')
+          ) {
+            paramName = 'formData';
+          } else if (contentType.includes('application/xml')) {
+            paramName = 'xmlData';
+          } else if (contentType.includes('application/octet-stream')) {
+            paramName = 'binaryData';
+          } else {
+            // 其他类型默认使用 data
+            paramName = 'data';
+          }
+
+          params.push({
+            name: paramName,
+            type: normalizedRef,
+            in: 'body',
+            required: api.requestBody!.required ?? true,
+            contentType: contentType, // 添加 content-type 标识
+          });
+        }
       });
     }
 
@@ -181,6 +234,7 @@ export class Transformer {
       hasPath: params.some((p) => p.in === 'path'),
       hasBody: params.some((p) => p.in === 'body'),
       hasQuery: params.some((p) => p.in === 'query'),
+      bodyContentTypes, // 返回所有 content-type
     };
   }
 
