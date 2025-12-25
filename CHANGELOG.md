@@ -1,5 +1,12 @@
 # api-codegen-runner
 
+## 0.3.2
+
+### Patch Changes
+
+- [`96f4a73`](https://github.com/XSIJIE975/api-codegen-runner/commit/96f4a7339ef23d71776b9ab89c4037bd2a77b473) Thanks [@XSIJIE975](https://github.com/XSIJIE975)! - feat: support multiple content-types in request body and response
+  - Update default API template to handle multiple content-types (prioritizing application/json)
+
 ## 0.3.1
 
 ### Patch Changes
