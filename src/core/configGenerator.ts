@@ -8,6 +8,8 @@ import pkg from '../../package.json';
 export const DEFAULT_CONFIG: UserConfig = {
   clean: true,
   debug: false,
+  watch: true,
+  watchDebounce: 1000,
   input: 'https://petstore3.swagger.io/api/v3/openapi.json',
   methodNameCase: 'PascalCase',
   requestConfig: {
@@ -54,6 +56,8 @@ import { defineConfig } from 'api-codegen-runner';
 export default defineConfig({
   clean: ${DEFAULT_CONFIG.clean},
   debug: ${DEFAULT_CONFIG.debug},
+  watch: ${DEFAULT_CONFIG.watch},
+  watchDebounce: ${DEFAULT_CONFIG.watchDebounce},
   // Option 1: OpenAPI Source (URL or File Path)
   input: '${DEFAULT_CONFIG.input}',
 

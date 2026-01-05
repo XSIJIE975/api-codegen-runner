@@ -1,7 +1,7 @@
 {
   "name": "api-codegen-runner",
   "version": "0.3.2",
-  "description": "基于模板的 API 代码生成工具，支持 OpenAPI 和 Apifox",
+  "description": "A powerful and flexible API code generator runner supporting OpenAPI, Swagger, and Apifox specifications, with customizable templates and integration for TypeScript, Axios, Fetch, EJS, and Vite.",
   "keywords": [
     "api",
     "codegen",

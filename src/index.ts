@@ -13,7 +13,17 @@ export function defineConfig(config: UserConfig): UserConfig {
 }
 
 export function ApiCodegenPlugin(inlineConfig?: Partial<UserConfig>) {
+  let isRunning = false;
+  let isPending = false;
+  let timer: NodeJS.Timeout | null = null;
+
   const runCodegen = async () => {
+    if (isRunning) {
+      isPending = true;
+      return;
+    }
+    isRunning = true;
+
     try {
       const { config } = await loadConfig<UserConfig>({
         sources: [{ files: 'codegen.config', extensions: ['ts', 'js'] }],
@@ -35,7 +45,20 @@ export function ApiCodegenPlugin(inlineConfig?: Partial<UserConfig>) {
       await generator.generate(data);
     } catch (error: unknown) {
       logger.error('Generation failed:', error);
+    } finally {
+      isRunning = false;
+      if (isPending) {
+        isPending = false;
+        void runCodegen();
+      }
     }
+  };
+
+  const debouncedRunCodegen = (delay = 1000) => {
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(() => {
+      runCodegen();
+    }, delay);
   };
 
   const plugin: Plugin = {
@@ -46,16 +69,26 @@ export function ApiCodegenPlugin(inlineConfig?: Partial<UserConfig>) {
       await runCodegen();
     },
 
-    configureServer(server: ViteDevServer) {
+    async configureServer(server: ViteDevServer) {
+      const { config } = await loadConfig<UserConfig>({
+        sources: [{ files: 'codegen.config', extensions: ['ts', 'js'] }],
+        merge: false,
+      });
+      const finalConfig = { ...config, ...inlineConfig } as UserConfig;
+
+      if (finalConfig.watch === false) return;
+
+      const debounceTime = finalConfig.watchDebounce ?? 1000;
+
       server.watcher.on('change', async (file) => {
         if (file.includes('codegen.config')) {
           logger.info('Configuration file changed. Reloading...');
-          await runCodegen();
+          debouncedRunCodegen(debounceTime);
         }
 
         if (file.endsWith('.ejs')) {
           logger.info('Template file changed. Regenerating...');
-          await runCodegen();
+          debouncedRunCodegen(debounceTime);
         }
       });
     },

@@ -7,6 +7,10 @@ import type {
 export interface UserConfig {
   /** 是否开启调试模式，会输出 debug 文件 */
   debug?: boolean;
+  /** 是否在开发模式下监听文件变化自动重新生成 (默认: true) */
+  watch?: boolean;
+  /** 监听文件变化的防抖时间 (ms) (默认: 1000) */
+  watchDebounce?: number;
   /** 生成前是否清理输出目录 */
   clean?: boolean;
   /**
