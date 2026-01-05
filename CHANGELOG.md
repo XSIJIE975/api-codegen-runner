@@ -1,5 +1,12 @@
 # api-codegen-runner
 
+## 0.3.3
+
+### Patch Changes
+
+- [#8](https://github.com/XSIJIE975/api-codegen-runner/pull/8) [`10e9e02`](https://github.com/XSIJIE975/api-codegen-runner/commit/10e9e02cfff95e75f9ea09f952309a9aa53ef2a9) Thanks [@XSIJIE975](https://github.com/XSIJIE975)! - feat: add `watch` and `watchDebounce` options to control file watching behavior
+  perf: optimize generation process with debounce and concurrency control
+
 ## 0.3.2
 
 ### Patch Changes
