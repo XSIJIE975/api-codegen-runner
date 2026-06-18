@@ -17,6 +17,14 @@ export function ApiCodegenPlugin(inlineConfig?: Partial<UserConfig>) {
   let isPending = false;
   let timer: NodeJS.Timeout | null = null;
 
+  const loadFinalConfig = async (): Promise<UserConfig> => {
+    const { config } = await loadConfig<UserConfig>({
+      sources: [{ files: 'codegen.config', extensions: ['ts', 'js'] }],
+      merge: false,
+    });
+    return { ...config, ...inlineConfig } as UserConfig;
+  };
+
   const runCodegen = async () => {
     if (isRunning) {
       isPending = true;
@@ -25,12 +33,7 @@ export function ApiCodegenPlugin(inlineConfig?: Partial<UserConfig>) {
     isRunning = true;
 
     try {
-      const { config } = await loadConfig<UserConfig>({
-        sources: [{ files: 'codegen.config', extensions: ['ts', 'js'] }],
-        merge: false,
-      });
-
-      const finalConfig = { ...config, ...inlineConfig } as UserConfig;
+      const finalConfig = await loadFinalConfig();
 
       if (!finalConfig) return;
 
@@ -70,11 +73,7 @@ export function ApiCodegenPlugin(inlineConfig?: Partial<UserConfig>) {
     },
 
     async configureServer(server: ViteDevServer) {
-      const { config } = await loadConfig<UserConfig>({
-        sources: [{ files: 'codegen.config', extensions: ['ts', 'js'] }],
-        merge: false,
-      });
-      const finalConfig = { ...config, ...inlineConfig } as UserConfig;
+      const finalConfig = await loadFinalConfig();
 
       if (finalConfig.watch === false) return;
 

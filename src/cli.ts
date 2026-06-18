@@ -21,9 +21,15 @@ program
   .option('-w, --watch', 'Watch for config changes')
   .action(async (opts) => {
     let isRunning = false;
+    let isPending = false;
 
     const run = async () => {
-      if (isRunning) return null;
+      if (isRunning) {
+        if (opts.watch) {
+          isPending = true;
+        }
+        return null;
+      }
       isRunning = true;
 
       logger.info('Starting generation...');
@@ -54,6 +60,11 @@ program
         return null;
       } finally {
         isRunning = false;
+        if (isPending) {
+          isPending = false;
+          logger.info('Pending changes detected, reloading...');
+          void run();
+        }
       }
     };
 
@@ -74,10 +85,6 @@ program
         if (eventType === 'change') {
           clearTimeout(debounceTimer);
           debounceTimer = setTimeout(() => {
-            if (isRunning) {
-              logger.info('Generation still in progress, skipping reload...');
-              return;
-            }
             logger.info('Config changed, reloading...');
             run();
           }, 200);
