@@ -182,10 +182,10 @@ export class Generator {
         const userTemplatePath = this.config.templates?.[type];
 
         if (userTemplatePath) {
-          const absPath = path.resolve(getCwd(), userTemplatePath);
+          const cwd = getCwd();
+          const absPath = path.resolve(cwd, userTemplatePath);
 
           // 路径遍历防护：确保模板路径在项目目录范围内
-          const cwd = getCwd();
           const relativePath = path.relative(cwd, absPath);
           if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
             logger.warn(

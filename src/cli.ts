@@ -85,6 +85,7 @@ program
       });
 
       // 优雅退出：监听 SIGINT/SIGTERM，关闭 watcher 后退出
+      // 使用方案 A：cleanup 负责清理并退出，Promise 仅保持进程存活
       const cleanup = () => {
         watcher.close();
         clearTimeout(debounceTimer);
@@ -93,11 +94,9 @@ program
       process.on('SIGINT', cleanup);
       process.on('SIGTERM', cleanup);
 
-      // 使用信号量保持进程存活，替代 await new Promise(() => {})
-      await new Promise<void>((resolve) => {
-        process.on('SIGINT', () => resolve());
-        process.on('SIGTERM', () => resolve());
-      });
+      // 永不 resolve 的 Promise 仅用于保持进程存活
+      // 信号处理完全由 cleanup 负责
+      await new Promise<void>(() => {});
     }
   });
 
