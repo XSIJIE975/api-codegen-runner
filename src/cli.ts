@@ -5,7 +5,7 @@ import { initCommand } from './commands/init';
 import { updateCommand } from './commands/update';
 import { DataLoader } from './core/loader';
 import { Generator } from './core/generator';
-import { validateConfig } from './core/validator';
+import { validateConfig, ConfigValidationError } from './core/validator';
 import { logger } from './utils/logger';
 import { UserConfig } from './types';
 
@@ -55,7 +55,10 @@ program
         await generator.generate(data);
         return sources[0];
       } catch (error) {
-        logger.error('Error during generation:', error);
+        // ConfigValidationError 已由 validateConfig 记录详细错误，避免重复输出
+        if (!(error instanceof ConfigValidationError)) {
+          logger.error('Error during generation:', error);
+        }
         if (!opts.watch) process.exit(1);
         return null;
       } finally {
@@ -77,8 +80,11 @@ program
       const watcher = fs.watch(configFile);
 
       // 监听 watcher 错误，避免未捕获异常
+      // 错误不可恢复（如配置文件被删除），记录日志后退出进程
       watcher.on('error', (err) => {
-        logger.error('File watcher error:', err);
+        logger.error('File watcher error (watching stopped):', err);
+        watcher.close();
+        process.exit(1);
       });
 
       watcher.on('change', (eventType) => {

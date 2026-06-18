@@ -191,8 +191,17 @@ export class Generator {
           const cwd = getCwd();
           const absPath = path.resolve(cwd, userTemplatePath);
 
-          // 路径遍历防护：确保模板路径在项目目录范围内
-          const relativePath = path.relative(cwd, absPath);
+          // 路径遍历防护：解析符号链接后确保模板路径在项目目录范围内
+          let realPath: string;
+          try {
+            realPath = await fs.realpath(absPath);
+          } catch {
+            // 文件不存在，使用原始路径（后续 pathExists 检查会处理）
+            realPath = absPath;
+          }
+          const realCwd = await fs.realpath(cwd);
+          const relativePath = path.relative(realCwd, realPath);
+
           if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
             logger.warn(
               `Custom template path rejected (outside project root): ${userTemplatePath}`,

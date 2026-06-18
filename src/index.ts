@@ -2,7 +2,7 @@ import { loadConfig } from 'unconfig';
 import type { ViteDevServer, Plugin } from 'vite';
 import { DataLoader } from './core/loader';
 import { Generator } from './core/generator';
-import { validateConfig } from './core/validator';
+import { validateConfig, ConfigValidationError } from './core/validator';
 import { logger } from './utils/logger';
 import { UserConfig } from './types';
 
@@ -47,7 +47,10 @@ export function ApiCodegenPlugin(inlineConfig?: Partial<UserConfig>) {
       const generator = new Generator(validConfig);
       await generator.generate(data);
     } catch (error: unknown) {
-      logger.error('Generation failed:', error);
+      // ConfigValidationError 已由 validateConfig 记录详细错误，避免重复输出
+      if (!(error instanceof ConfigValidationError)) {
+        logger.error('Generation failed:', error);
+      }
     } finally {
       isRunning = false;
       if (isPending) {
