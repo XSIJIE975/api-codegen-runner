@@ -183,7 +183,15 @@ export class Generator {
 
         if (userTemplatePath) {
           const absPath = path.resolve(getCwd(), userTemplatePath);
-          if (await fs.pathExists(absPath)) {
+
+          // 路径遍历防护：确保模板路径在项目目录范围内
+          const cwd = getCwd();
+          const relativePath = path.relative(cwd, absPath);
+          if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
+            logger.warn(
+              `Custom template path rejected (outside project root): ${userTemplatePath}`,
+            );
+          } else if (await fs.pathExists(absPath)) {
             content = await fs.readFile(absPath, 'utf-8');
           } else {
             logger.warn(`Custom template not found at: ${absPath}`);

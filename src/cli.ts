@@ -20,7 +20,12 @@ program
   .option('-c, --config <path>', 'Config path', 'codegen.config')
   .option('-w, --watch', 'Watch for config changes')
   .action(async (opts) => {
+    let isRunning = false;
+
     const run = async () => {
+      if (isRunning) return null;
+      isRunning = true;
+
       logger.info('Starting generation...');
       try {
         const result = await loadConfig<UserConfig>({
@@ -45,8 +50,10 @@ program
         return sources[0];
       } catch (error) {
         logger.error('Error during generation:', error);
-        if (!opts.watch) process.exit(1); // 非 Watch 模式才退出
+        if (!opts.watch) process.exit(1);
         return null;
+      } finally {
+        isRunning = false;
       }
     };
 
@@ -56,17 +63,41 @@ program
       logger.info(`Watching for changes in ${configFile}...`);
 
       let debounceTimer: NodeJS.Timeout;
+      const watcher = fs.watch(configFile);
 
-      fs.watch(configFile, (eventType) => {
+      // 监听 watcher 错误，避免未捕获异常
+      watcher.on('error', (err) => {
+        logger.error('File watcher error:', err);
+      });
+
+      watcher.on('change', (eventType) => {
         if (eventType === 'change') {
           clearTimeout(debounceTimer);
           debounceTimer = setTimeout(() => {
+            if (isRunning) {
+              logger.info('Generation still in progress, skipping reload...');
+              return;
+            }
             logger.info('Config changed, reloading...');
             run();
           }, 200);
         }
       });
-      await new Promise(() => {});
+
+      // 优雅退出：监听 SIGINT/SIGTERM，关闭 watcher 后退出
+      const cleanup = () => {
+        watcher.close();
+        clearTimeout(debounceTimer);
+        process.exit(0);
+      };
+      process.on('SIGINT', cleanup);
+      process.on('SIGTERM', cleanup);
+
+      // 使用信号量保持进程存活，替代 await new Promise(() => {})
+      await new Promise<void>((resolve) => {
+        process.on('SIGINT', () => resolve());
+        process.on('SIGTERM', () => resolve());
+      });
     }
   });
 
