@@ -2,7 +2,7 @@ import { loadConfig } from 'unconfig';
 import type { ViteDevServer, Plugin } from 'vite';
 import { DataLoader } from './core/loader';
 import { Generator } from './core/generator';
-import { validateConfig } from './core/validator';
+import { validateConfig, ConfigValidationError } from './core/validator';
 import { logger } from './utils/logger';
 import { UserConfig } from './types';
 
@@ -17,6 +17,14 @@ export function ApiCodegenPlugin(inlineConfig?: Partial<UserConfig>) {
   let isPending = false;
   let timer: NodeJS.Timeout | null = null;
 
+  const loadFinalConfig = async (): Promise<UserConfig> => {
+    const { config } = await loadConfig<UserConfig>({
+      sources: [{ files: 'codegen.config', extensions: ['ts', 'js'] }],
+      merge: false,
+    });
+    return { ...config, ...inlineConfig } as UserConfig;
+  };
+
   const runCodegen = async () => {
     if (isRunning) {
       isPending = true;
@@ -25,12 +33,7 @@ export function ApiCodegenPlugin(inlineConfig?: Partial<UserConfig>) {
     isRunning = true;
 
     try {
-      const { config } = await loadConfig<UserConfig>({
-        sources: [{ files: 'codegen.config', extensions: ['ts', 'js'] }],
-        merge: false,
-      });
-
-      const finalConfig = { ...config, ...inlineConfig } as UserConfig;
+      const finalConfig = await loadFinalConfig();
 
       if (!finalConfig) return;
 
@@ -44,7 +47,10 @@ export function ApiCodegenPlugin(inlineConfig?: Partial<UserConfig>) {
       const generator = new Generator(validConfig);
       await generator.generate(data);
     } catch (error: unknown) {
-      logger.error('Generation failed:', error);
+      // ConfigValidationError 已由 validateConfig 记录详细错误，避免重复输出
+      if (!(error instanceof ConfigValidationError)) {
+        logger.error('Generation failed:', error);
+      }
     } finally {
       isRunning = false;
       if (isPending) {
@@ -70,11 +76,7 @@ export function ApiCodegenPlugin(inlineConfig?: Partial<UserConfig>) {
     },
 
     async configureServer(server: ViteDevServer) {
-      const { config } = await loadConfig<UserConfig>({
-        sources: [{ files: 'codegen.config', extensions: ['ts', 'js'] }],
-        merge: false,
-      });
-      const finalConfig = { ...config, ...inlineConfig } as UserConfig;
+      const finalConfig = await loadFinalConfig();
 
       if (finalConfig.watch === false) return;
 

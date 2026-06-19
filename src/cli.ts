@@ -5,7 +5,7 @@ import { initCommand } from './commands/init';
 import { updateCommand } from './commands/update';
 import { DataLoader } from './core/loader';
 import { Generator } from './core/generator';
-import { validateConfig } from './core/validator';
+import { validateConfig, ConfigValidationError } from './core/validator';
 import { logger } from './utils/logger';
 import { UserConfig } from './types';
 
@@ -20,7 +20,18 @@ program
   .option('-c, --config <path>', 'Config path', 'codegen.config')
   .option('-w, --watch', 'Watch for config changes')
   .action(async (opts) => {
+    let isRunning = false;
+    let isPending = false;
+
     const run = async () => {
+      if (isRunning) {
+        if (opts.watch) {
+          isPending = true;
+        }
+        return null;
+      }
+      isRunning = true;
+
       logger.info('Starting generation...');
       try {
         const result = await loadConfig<UserConfig>({
@@ -44,9 +55,19 @@ program
         await generator.generate(data);
         return sources[0];
       } catch (error) {
-        logger.error('Error during generation:', error);
-        if (!opts.watch) process.exit(1); // 非 Watch 模式才退出
+        // ConfigValidationError 已由 validateConfig 记录详细错误，避免重复输出
+        if (!(error instanceof ConfigValidationError)) {
+          logger.error('Error during generation:', error);
+        }
+        if (!opts.watch) process.exit(1);
         return null;
+      } finally {
+        isRunning = false;
+        if (isPending) {
+          isPending = false;
+          logger.info('Pending changes detected, reloading...');
+          void run();
+        }
       }
     };
 
@@ -56,8 +77,17 @@ program
       logger.info(`Watching for changes in ${configFile}...`);
 
       let debounceTimer: NodeJS.Timeout;
+      const watcher = fs.watch(configFile);
 
-      fs.watch(configFile, (eventType) => {
+      // 监听 watcher 错误，避免未捕获异常
+      // 错误不可恢复（如配置文件被删除），记录日志后退出进程
+      watcher.on('error', (err) => {
+        logger.error('File watcher error (watching stopped):', err);
+        watcher.close();
+        process.exit(1);
+      });
+
+      watcher.on('change', (eventType) => {
         if (eventType === 'change') {
           clearTimeout(debounceTimer);
           debounceTimer = setTimeout(() => {
@@ -66,7 +96,20 @@ program
           }, 200);
         }
       });
-      await new Promise(() => {});
+
+      // 优雅退出：监听 SIGINT/SIGTERM，关闭 watcher 后退出
+      // 使用方案 A：cleanup 负责清理并退出，Promise 仅保持进程存活
+      const cleanup = () => {
+        watcher.close();
+        clearTimeout(debounceTimer);
+        process.exit(0);
+      };
+      process.on('SIGINT', cleanup);
+      process.on('SIGTERM', cleanup);
+
+      // 永不 resolve 的 Promise 仅用于保持进程存活
+      // 信号处理完全由 cleanup 负责
+      await new Promise<void>(() => {});
     }
   });
 

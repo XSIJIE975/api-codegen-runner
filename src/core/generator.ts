@@ -13,7 +13,8 @@ import { toPascalCase as pascalCase } from '../utils/formatting';
 
 export class Generator {
   private transformer: Transformer;
-  private templateCache: Map<string, Promise<string>> = new Map();
+  private templateCache: Map<string, Promise<import('ejs').TemplateFunction>> =
+    new Map();
 
   constructor(private config: UserConfig) {
     this.transformer = new Transformer(config);
@@ -22,6 +23,9 @@ export class Generator {
   async generate(data: StandardOutput) {
     const startTime = performance.now();
     logger.info('Generating code...');
+
+    // 清理模板缓存以支持热重载场景
+    this.templateCache.clear();
 
     // 1. 清理输出目录
     if (this.config.clean) {
@@ -175,15 +179,34 @@ export class Generator {
     }
   }
 
-  private getTemplateContent(type: 'api' | 'type'): Promise<string> {
+  private getCompiledTemplate(
+    type: 'api' | 'type',
+  ): Promise<import('ejs').TemplateFunction> {
     if (!this.templateCache.has(type)) {
       const promise = (async () => {
         let content = '';
         const userTemplatePath = this.config.templates?.[type];
 
         if (userTemplatePath) {
-          const absPath = path.resolve(getCwd(), userTemplatePath);
-          if (await fs.pathExists(absPath)) {
+          const cwd = getCwd();
+          const absPath = path.resolve(cwd, userTemplatePath);
+
+          // 路径遍历防护：解析符号链接后确保模板路径在项目目录范围内
+          let realPath: string;
+          try {
+            realPath = await fs.realpath(absPath);
+          } catch {
+            // 文件不存在，使用原始路径（后续 pathExists 检查会处理）
+            realPath = absPath;
+          }
+          const realCwd = await fs.realpath(cwd);
+          const relativePath = path.relative(realCwd, realPath);
+
+          if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
+            logger.warn(
+              `Custom template path rejected (outside project root): ${userTemplatePath}`,
+            );
+          } else if (await fs.pathExists(absPath)) {
             content = await fs.readFile(absPath, 'utf-8');
           } else {
             logger.warn(`Custom template not found at: ${absPath}`);
@@ -199,7 +222,7 @@ export class Generator {
           );
           content = await fs.readFile(defaultPath, 'utf-8');
         }
-        return content;
+        return ejs.compile(content, { async: false });
       })();
 
       this.templateCache.set(type, promise);
@@ -208,7 +231,7 @@ export class Generator {
   }
 
   private async renderTemplate(type: 'api' | 'type', data: object) {
-    const tmpl = await this.getTemplateContent(type);
+    const compiledTemplate = await this.getCompiledTemplate(type);
 
     const templateData = {
       ...data,
@@ -264,7 +287,7 @@ export class Generator {
       },
     };
 
-    return ejs.render(tmpl, templateData, { async: false });
+    return compiledTemplate(templateData);
   }
 
   private async writeFile(filePath: string, content: string) {

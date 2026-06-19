@@ -3,6 +3,21 @@ import chalk from 'chalk';
 import { UserConfig } from '../types';
 import { logger } from '../utils/logger';
 
+/**
+ * 配置验证错误。
+ * 由 validateConfig() 抛出，调用方应捕获并决定如何处理（日志、退出、或继续）。
+ * Vite 插件等集成场景中不应直接 process.exit()。
+ */
+export class ConfigValidationError extends Error {
+  constructor(
+    message: string,
+    public readonly issues: z.ZodIssue[],
+  ) {
+    super(message);
+    this.name = 'ConfigValidationError';
+  }
+}
+
 const configSchema: z.ZodType<UserConfig> = z.object({
   input: z.union([
     z.string().min(1),
@@ -77,6 +92,9 @@ export async function validateConfig(config: unknown): Promise<UserConfig> {
 
       logger.error(`${pathStr}: ${displayMessage}`);
     });
-    process.exit(1);
+
+    // 不再直接 process.exit(1)，改为抛出异常
+    // 调用方（CLI / Vite 插件）应捕获并决定如何处理
+    throw new ConfigValidationError('Configuration validation failed', issues);
   }
 }
