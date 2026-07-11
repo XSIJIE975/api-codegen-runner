@@ -43,8 +43,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/XSIJIE975/api-codegen-runner.git",
-    "directory": "packages/api-codegen-runner"
+    "url": "https://github.com/XSIJIE975/api-codegen-runner.git"
   },
   "homepage": "https://github.com/XSIJIE975/api-codegen-runner#readme",
   "bugs": {
@@ -100,5 +99,14 @@
   "engines": {
     "node": ">=20.0.0",
     "pnpm": ">=8.0.0"
+  },
+  "lint-staged": {
+    "*.ts": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,yml,yaml}": [
+      "prettier --write"
+    ]
   }
 }

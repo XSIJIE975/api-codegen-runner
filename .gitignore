@@ -16,3 +16,6 @@ storybook-static
 .vscode/*
 !.vscode/extensions.json
 .idea
+
+# Superpowers plans
+docs/superpowers/
