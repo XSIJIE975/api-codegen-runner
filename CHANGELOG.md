@@ -1,5 +1,11 @@
 # api-codegen-runner
 
+## 0.4.1
+
+### Patch Changes
+
+- [`ca716eb`](https://github.com/XSIJIE975/api-codegen-runner/commit/ca716eb5faf93014551afe492171fd47f12c0e88) Thanks [@XSIJIE975](https://github.com/XSIJIE975)! - fix: remove unnecessary quotes from keys in generated config template
+
 ## 0.4.0
 
 ### Minor Changes
