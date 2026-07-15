@@ -106,8 +106,8 @@ export default defineConfig({
   },
 
   // Hooks for custom logic
-  "hooks": {
-    "onComplete": (config) => {
+  hooks: {
+    onComplete: (config) => {
       // do something after generation completes
     }
   }
