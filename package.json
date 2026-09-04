@@ -52,6 +52,7 @@
   "scripts": {
     "dev": "tsup --watch",
     "build": "tsup",
+    "test": "vitest run",
     "lint": "eslint \"**/*.ts\"",
     "lint:fix": "eslint \"**/*.ts\" --fix",
     "format": "prettier --write .",
@@ -65,7 +66,7 @@
     "vite": ">=5.0.0"
   },
   "dependencies": {
-    "api-codegen-universal": "^0.6.0",
+    "api-codegen-universal": "^0.7.0",
     "chalk": "^5.6.2",
     "commander": "^14.0.2",
     "ejs": "^3.1.10",
@@ -94,7 +95,8 @@
     "tsup": "^8.5.1",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.48.1",
-    "vite": "^5.4.21"
+    "vite": "^5.4.21",
+    "vitest": "^3.2.4"
   },
   "engines": {
     "node": ">=20.0.0",

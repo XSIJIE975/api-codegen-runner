@@ -75,6 +75,27 @@ export class Transformer {
       } as ApiFunctionViewModel;
     });
 
+    // 兜底检测：同一输出文件内最终函数名冲突时直接报错，
+    // 避免静默生成重复的 export const（TS Duplicate identifier）。
+    // 归一化层面的消歧由 api-codegen-universal >= 0.7.0 在 operationId 阶段完成，
+    // 这里拦截的是自定义模板、methodNameCase 等本层变换可能引入的残余冲突。
+    const nameIndex = new Map<string, { method: string; url: string }>();
+    for (const fn of functions) {
+      const existing = nameIndex.get(fn.name);
+      if (existing) {
+        throw new Error(
+          `Duplicate function name "${fn.name}" detected in generated file "${targetFilePath}".\n` +
+            `Conflicting endpoints:\n` +
+            `  - ${existing.method.toUpperCase()} ${existing.url}\n` +
+            `  - ${fn.method.toUpperCase()} ${fn.url}\n` +
+            `These endpoints collide after method-name normalization. Rename one of them in the API source ` +
+            `(Apifox/OpenAPI), or upgrade api-codegen-universal to >= 0.7.0 which disambiguates ` +
+            `operationIds automatically.`,
+        );
+      }
+      nameIndex.set(fn.name, { method: fn.method, url: fn.url });
+    }
+
     // 4. 计算 import 路径
     const absApiFilePath = path.join(apiDir, targetFilePath);
     const absApiDir = path.dirname(absApiFilePath);
