@@ -50,6 +50,8 @@ const configSchema: z.ZodType<UserConfig> = z.object({
 
   debug: z.boolean().optional(),
   clean: z.boolean().optional(),
+  watch: z.boolean().optional(),
+  watchDebounce: z.number().int().positive().optional(),
 
   hooks: z
     .object({
