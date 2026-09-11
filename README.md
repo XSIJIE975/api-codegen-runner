@@ -156,7 +156,7 @@ interface UserConfig {
 
   /**
    * API method name formatting style
-   * @default 'camelCase'
+   * @default 'PascalCase'
    */
   methodNameCase?: 'camelCase' | 'PascalCase' | 'snake_case';
 

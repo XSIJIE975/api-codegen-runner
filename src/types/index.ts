@@ -28,7 +28,7 @@ export interface UserConfig {
 
   /**
    * 生成的 API 方法名称格式
-   * @default 'camelCase'
+   * @default 'PascalCase'
    */
   methodNameCase?: 'camelCase' | 'PascalCase' | 'snake_case';
 
