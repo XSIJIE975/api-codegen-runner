@@ -3,7 +3,7 @@ import globals from 'globals';
 import ts from 'typescript-eslint';
 
 export default [
-  { languageOptions: { globals: globals.browser } },
+  { languageOptions: { globals: globals.node } },
   js.configs.recommended,
   ...ts.configs.recommended,
   { ignores: ['dist/', 'node_modules/', 'coverage/'] },

@@ -10,7 +10,7 @@ export default defineConfig({
   splitting: true,
   target: 'node20',
   async onSuccess() {
-    process.env.TSUP_BUILD = 'true';
+    process.env.API_CODEGEN_RUNNER_BUILD = 'true';
     await buildTemplates();
   },
 });
