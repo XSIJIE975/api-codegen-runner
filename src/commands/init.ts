@@ -6,7 +6,7 @@ import { logger } from '../utils/logger';
 import { generateConfigFileContent } from '../core/configGenerator';
 import { TemplateManager } from '../core/templateManager';
 
-export async function initCommand() {
+export async function initCommand(options: { eject?: boolean } = {}) {
   const cwd = getCwd();
 
   logger.info('Initializing configuration...');
@@ -21,16 +21,28 @@ export async function initCommand() {
     logger.warn('codegen.config.ts already exists. Skipped.');
   }
 
-  // 2. 询问是否释放默认模板
-  const { eject } = await inquirer.prompt([
-    {
-      type: 'confirm',
-      name: 'eject',
-      message:
-        'Do you want to eject default templates to ./templates folder for customization?',
-      default: false,
-    },
-  ]);
+  // 2. 决定是否释放默认模板
+  // 优先使用命令行参数（--eject / --no-eject），保证 CI 等非交互环境可用；
+  // 未指定时在交互式终端中询问，非交互环境默认跳过
+  let eject = options.eject;
+  if (eject === undefined) {
+    if (!process.stdout.isTTY) {
+      logger.info(
+        'Non-interactive environment detected, skipping template ejection (use --eject to enable).',
+      );
+      eject = false;
+    } else {
+      ({ eject } = await inquirer.prompt([
+        {
+          type: 'confirm',
+          name: 'eject',
+          message:
+            'Do you want to eject default templates to ./templates folder for customization?',
+          default: false,
+        },
+      ]));
+    }
+  }
 
   if (eject) {
     const dest = path.join(cwd, 'templates');

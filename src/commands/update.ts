@@ -5,7 +5,7 @@ import { logger } from '../utils/logger';
 import { TemplateManager } from '../core/templateManager';
 import { UserConfig } from '../types';
 
-export async function updateCommand() {
+export async function updateCommand(options: { config?: string } = {}) {
   const cwd = getCwd();
   const defaultTemplatesDir = path.join(cwd, 'templates');
 
@@ -14,7 +14,9 @@ export async function updateCommand() {
   try {
     // 1. 尝试加载用户配置，获取自定义模板路径
     const { config } = await loadConfig<UserConfig>({
-      sources: [{ files: 'codegen.config', extensions: ['ts', 'js'] }],
+      sources: [
+        { files: options.config ?? 'codegen.config', extensions: ['ts', 'js'] },
+      ],
       merge: false,
     });
 
