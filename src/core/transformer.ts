@@ -1,6 +1,11 @@
 import path from 'path';
 import { camelCase as toCamelCase, snakeCase as toSnakeCase } from 'lodash-es';
-import type { StandardOutput, ApiDefinition } from 'api-codegen-universal';
+import type {
+  StandardOutput,
+  ApiDefinition,
+  ResponseDefinition,
+  PropertyDefinition,
+} from 'api-codegen-universal';
 import type {
   ApiFileViewModel,
   ApiFunctionViewModel,
@@ -12,6 +17,7 @@ import {
   toPascalCase,
   normalizeType,
 } from '../utils/formatting';
+import { logger } from '../utils/logger';
 
 export class Transformer {
   constructor(private config: UserConfig) {}
@@ -28,6 +34,10 @@ export class Transformer {
 
     const functions = apis.map((api) => {
       // 1. URL 处理，如将: /users/{id} -> /users/${id}
+      const urlPlaceholders = Array.from(
+        api.path.matchAll(/\{([^}]+)\}/g),
+        (m) => m[1],
+      );
       const url = api.path.replace(/\{([^}]+)\}/g, '${$1}');
 
       // 2. 响应类型解析
@@ -47,6 +57,24 @@ export class Transformer {
         bodyContentTypes,
       } = this.resolveParameters(api, schemas, importTypes, schemaNames);
 
+      // 3.5 校验 URL 占位符与 path 参数一一对应，避免生成引用
+      // 未定义变量的代码（错误会延迟到用户项目编译时才暴露）
+      const pathParamNames = new Set(
+        params.filter((p) => p.in === 'path').map((p) => p.name),
+      );
+      const unmatchedPlaceholders = urlPlaceholders.filter((ph) => {
+        // 占位符必须是合法 JS 标识符才能作为模板字面量变量
+        if (!/^[A-Za-z_$][\w$]*$/.test(ph)) return true;
+        return !pathParamNames.has(ph);
+      });
+      if (unmatchedPlaceholders.length > 0) {
+        logger.warn(
+          `${api.method.toUpperCase()} ${api.path}: path placeholder(s) ` +
+            `[${unmatchedPlaceholders.join(', ')}] have no matching path ` +
+            `parameter; generated code may reference undefined variables.`,
+        );
+      }
+
       // 4. 方法名格式化
       let name = api.operationId;
       const caseStyle = this.config.methodNameCase || 'PascalCase';
@@ -54,10 +82,12 @@ export class Transformer {
       else if (caseStyle === 'PascalCase') name = toPascalCase(name);
       else if (caseStyle === 'snake_case') name = toSnakeCase(name);
 
-      // 5. 描述信息
+      // 5. 描述信息（清洗换行与注释终结符，避免破坏生成的 JSDoc）
+      const sanitize = (text: string) =>
+        text.replace(/\r?\n/g, ' ').replace(/\*\//g, '* /').trim();
       const descParts = [];
-      if (api.summary) descParts.push(api.summary);
-      if (api.description) descParts.push(api.description);
+      if (api.summary) descParts.push(sanitize(api.summary));
+      if (api.description) descParts.push(sanitize(api.description));
       const description = descParts.join('\n * ');
 
       return {
@@ -125,22 +155,34 @@ export class Transformer {
   }
 
   private resolveResponseType(api: ApiDefinition): string {
-    const successRes = api.responses['200'] || api.responses['201'];
-    if (!successRes?.content) return 'any';
-
-    // 优先查找 application/json，然后遍历所有 content-type
-    const contentTypes = Object.keys(successRes.content);
-    const jsonType = contentTypes.find((ct) => ct.includes('application/json'));
-
-    if (jsonType) {
-      return successRes.content[jsonType]?.schema?.ref || 'any';
+    // 收集所有 2xx 响应（含 OpenAPI 3.1 的 '2XX' 通配），合并为 union。
+    // default / 4xx / 5xx 不参与成功类型推导。
+    const refs: string[] = [];
+    for (const [code, res] of Object.entries(api.responses || {})) {
+      if (!/^(2\d\d|2XX)$/i.test(code)) continue;
+      const ref = this.pickResponseRef(res);
+      if (ref) refs.push(ref);
     }
 
-    // 如果没有 json，返回第一个 content-type 的 ref
-    const firstContentType = contentTypes[0];
-    return firstContentType
-      ? successRes.content[firstContentType]?.schema?.ref || 'any'
-      : 'any';
+    const uniqueRefs = Array.from(new Set(refs));
+    return uniqueRefs.length > 0 ? uniqueRefs.join(' | ') : 'any';
+  }
+
+  private pickResponseRef(res: ResponseDefinition): string | null {
+    if (!res?.content) return null;
+
+    // 优先查找 application/json，否则按文档声明顺序取第一个有效 ref
+    const contentTypes = Object.keys(res.content);
+    const jsonType = contentTypes.find((ct) => ct.includes('application/json'));
+    const ordered = jsonType
+      ? [jsonType, ...contentTypes.filter((ct) => ct !== jsonType)]
+      : contentTypes;
+
+    for (const contentType of ordered) {
+      const ref = res.content[contentType]?.schema?.ref;
+      if (ref) return ref;
+    }
+    return null;
   }
 
   private resolveParameters(
@@ -166,10 +208,13 @@ export class Transformer {
       if (schema && schema.properties) {
         // 展开模式: 把对象里的属性拿出来作为参数
         Object.entries(schema.properties).forEach(
-          ([key, prop]: [string, unknown]) => {
+          ([key, prop]: [string, PropertyDefinition]) => {
+            const propType = this.mapSchemaTypeToTs(prop, schemaNames);
+            // 属性类型可能引用其他 schema（含数组元素类型），需要补齐 import
+            extractRefTypes(propType).forEach((t) => importTypes.add(t));
             params.push({
               name: key,
-              type: this.mapSchemaTypeToTs(prop),
+              type: propType,
               in: 'path',
               required: true,
             });
@@ -259,11 +304,14 @@ export class Transformer {
     };
   }
 
-  private mapSchemaTypeToTs(prop: unknown): string {
-    const typedProp = prop as { type?: string };
-    if (typedProp.type === 'integer' || typedProp.type === 'number')
-      return 'number';
-    if (typedProp.type === 'boolean') return 'boolean';
-    return 'string';
+  private mapSchemaTypeToTs(
+    prop: PropertyDefinition,
+    schemaNames: Set<string>,
+  ): string {
+    // api-codegen-universal 输出的 PropertyDefinition.type 已经是 TS 类型
+    // 字符串（如 'string'、'number'、'UserDto'、'UserDto[]'、"'a' | 'b'"），
+    // 直接使用并做规范化，不能再按 JSON Schema 重新推导
+    const raw = prop?.type?.trim();
+    return raw ? normalizeType(raw, schemaNames) : 'string';
   }
 }

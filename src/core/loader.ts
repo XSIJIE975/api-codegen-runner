@@ -28,25 +28,22 @@ export class DataLoader {
     logger.info(`Using adapter type: ${adapterType}`);
 
     // 2. 根据模式调用不同的 Adapter
+    // 失败时直接向上抛出，由调用方（CLI / Vite 插件）统一记录错误，
+    // 避免同一错误被打印两遍
     let data;
-    try {
-      if (adapterType === 'apifox') {
-        logger.info(
-          `Fetching from Apifox Project: ${(input as ApifoxConfig).projectId}...`,
-        );
-        const adapter = new ApifoxAdapter();
-        data = await adapter.parse(input as ApifoxConfig, requestConfig);
-      } else {
-        logger.info(`Fetching OpenAPI Schema: ${input}...`);
-        const adapter = new OpenAPIAdapter();
-        data = await adapter.parse(input as InputSource, requestConfig);
-      }
-
-      logger.success('Schema loaded successfully.');
-      return data as StandardOutput;
-    } catch (error: unknown) {
-      logger.error('Data loading failed:', error);
-      throw error;
+    if (adapterType === 'apifox') {
+      logger.info(
+        `Fetching from Apifox Project: ${(input as ApifoxConfig).projectId}...`,
+      );
+      const adapter = new ApifoxAdapter();
+      data = await adapter.parse(input as ApifoxConfig, requestConfig);
+    } else {
+      logger.info(`Fetching OpenAPI Schema: ${input}...`);
+      const adapter = new OpenAPIAdapter();
+      data = await adapter.parse(input as InputSource, requestConfig);
     }
+
+    logger.success('Schema loaded successfully.');
+    return data as StandardOutput;
   }
 }
