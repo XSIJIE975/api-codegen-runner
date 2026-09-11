@@ -195,6 +195,7 @@ describe('Transformer', () => {
         type: 'object',
         properties: {
           petId: { name: 'petId', type: 'number', required: true },
+          nickname: { name: 'nickname', type: 'string', required: false },
         },
       },
     };
@@ -213,6 +214,12 @@ describe('Transformer', () => {
       type: 'number',
       in: 'path',
     });
+    // 可选属性不应被强转为必填参数
+    expect(vm.functions[0].allParams[1]).toMatchObject({
+      name: 'nickname',
+      type: 'string',
+      required: false,
+    });
     // 引用其他 schema 的属性类型需要补进 import 列表
     const tagApi = makeApi('/tags/{tagId}', 'getTag');
     tagApi.method = 'GET';
@@ -229,7 +236,7 @@ describe('Transformer', () => {
       TYPE_DIR,
       API_DIR,
     );
-    expect(vm2.functions[0].allParams[1]).toMatchObject({
+    expect(vm2.functions[0].allParams[2]).toMatchObject({
       name: 'tagId',
       type: 'Tag',
     });

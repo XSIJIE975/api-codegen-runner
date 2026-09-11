@@ -24,6 +24,8 @@ interface RunResult {
 const WATCH_DEBOUNCE_MS = 200;
 /** 编辑器原子保存（rename+replace）后重建 watcher 的等待时间 */
 const RENAME_REARM_DELAY_MS = 100;
+/** rename 后重建 watcher 的重试次数（等待编辑器完成替换） */
+const RENAME_REARM_ATTEMPTS = 10;
 
 const program = new Command();
 program
@@ -62,51 +64,58 @@ program
       isRunning = true;
 
       logger.info('Starting generation...');
+      let result: RunResult | null = null;
       try {
-        const result = await loadConfig<UserConfig>({
+        const loaded = await loadConfig<UserConfig>({
           sources: [{ files: opts.config, extensions: ['ts', 'js'] }],
           merge: false,
         });
 
-        const { config, sources, dependencies } = result;
+        const { config, sources, dependencies } = loaded;
 
         if (!config) {
           logger.error('Config not found');
           if (!opts.watch) process.exit(1);
-          return null;
+          result = null;
+        } else {
+          const validConfig = await validateConfig(config);
+
+          const loader = new DataLoader();
+          const data = await loader.load(validConfig);
+
+          const generator = new Generator(validConfig);
+          await generator.generate(data);
+
+          const templateFiles = Object.values(validConfig.templates ?? {})
+            .filter((p): p is string => Boolean(p))
+            .map((p) => path.resolve(getCwd(), p));
+
+          result = {
+            configFile: sources[0],
+            dependencies: dependencies ?? [],
+            templateFiles,
+          };
         }
-        const validConfig = await validateConfig(config);
-
-        const loader = new DataLoader();
-        const data = await loader.load(validConfig);
-
-        const generator = new Generator(validConfig);
-        await generator.generate(data);
-
-        const templateFiles = Object.values(validConfig.templates ?? {})
-          .filter((p): p is string => Boolean(p))
-          .map((p) => path.resolve(getCwd(), p));
-
-        return {
-          configFile: sources[0],
-          dependencies: dependencies ?? [],
-          templateFiles,
-        };
       } catch (error) {
         // ConfigValidationError 已由 validateConfig 记录详细错误，避免重复输出
         if (!(error instanceof ConfigValidationError)) {
           logger.error('Error during generation:', error);
         }
         if (!opts.watch) process.exit(1);
-        return null;
+        result = null;
       } finally {
         isRunning = false;
-        if (isPending) {
-          isPending = false;
-          logger.info('Pending changes detected, reloading...');
-          void run();
-        }
       }
+
+      // 运行期间到达的变更在本次完成后补跑一次，并返回补跑的结果，
+      // 让 watchLoop 能基于最新的配置/模板路径重建监听集合
+      if (isPending) {
+        isPending = false;
+        logger.info('Pending changes detected, reloading...');
+        result = await run();
+      }
+
+      return result;
     };
 
     const result = await run();
@@ -133,6 +142,7 @@ async function watchLoop(
   run: () => Promise<RunResult | null>,
 ): Promise<void> {
   const watched = new Map<string, fs.FSWatcher>();
+  const rearmTimers = new Set<NodeJS.Timeout>();
   let debounceTimer: NodeJS.Timeout | undefined;
   let current = initial;
 
@@ -146,6 +156,8 @@ async function watchLoop(
     );
 
   const closeAll = () => {
+    for (const timer of rearmTimers) clearTimeout(timer);
+    rearmTimers.clear();
     for (const watcher of watched.values()) watcher.close();
     watched.clear();
   };
@@ -162,12 +174,35 @@ async function watchLoop(
     }, WATCH_DEBOUNCE_MS);
   };
 
-  const watchOne = (file: string) => {
+  /** 延迟重建 watcher；定时器登记在 rearmTimers，closeAll/setup 时一并取消 */
+  const rearm = (file: string, attemptsLeft: number) => {
+    const timer = setTimeout(() => {
+      rearmTimers.delete(timer);
+      watchOne(file, attemptsLeft);
+    }, RENAME_REARM_DELAY_MS);
+    rearmTimers.add(timer);
+  };
+
+  /**
+   * attemptsLeft: 剩余重试次数。0 表示初次挂载（失败只记 debug，不重试，
+   * 如配置了但尚未创建的模板）；大于 0 表示 rename 后的重建，失败时有限
+   * 次重试，耗尽后以 warn 收场，避免静默停止监听。
+   */
+  const watchOne = (file: string, attemptsLeft = 0) => {
     let watcher: fs.FSWatcher;
     try {
       watcher = fs.watch(file);
     } catch (error) {
-      logger.debug(`Cannot watch ${file} (skipping):`, error);
+      if (attemptsLeft > 1) {
+        rearm(file, attemptsLeft - 1);
+      } else if (attemptsLeft === 1) {
+        logger.warn(
+          `Cannot re-arm watcher for ${file} (stopped watching it):`,
+          error,
+        );
+      } else {
+        logger.debug(`Cannot watch ${file} (skipping):`, error);
+      }
       return;
     }
 
@@ -179,7 +214,11 @@ async function watchLoop(
     watcher.on('rename', () => {
       watcher.close();
       watched.delete(file);
-      setTimeout(() => watchOne(file), RENAME_REARM_DELAY_MS);
+      // rename 本身也要触发再生成：Linux（inotify）下编辑器原子保存
+      // 只产生 rename 事件，新 inode 的写入发生在重建之前，若不在这里
+      // schedule，这次变更会被静默丢失（Windows 会附带 change，防抖可合并）
+      schedule();
+      rearm(file, RENAME_REARM_ATTEMPTS);
     });
     watcher.on('error', (error) => {
       if (isConfig) {

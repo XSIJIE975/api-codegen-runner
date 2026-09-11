@@ -216,7 +216,7 @@ export class Transformer {
               name: key,
               type: propType,
               in: 'path',
-              required: true,
+              required: prop.required !== false,
             });
           },
         );
@@ -309,8 +309,9 @@ export class Transformer {
     schemaNames: Set<string>,
   ): string {
     // api-codegen-universal 输出的 PropertyDefinition.type 已经是 TS 类型
-    // 字符串（如 'string'、'number'、'UserDto'、'UserDto[]'、"'a' | 'b'"），
-    // 直接使用并做规范化，不能再按 JSON Schema 重新推导
+    // 字符串（如 'string'、'number'、'UserDto'、'UserDto[]'；枚举由上游
+    // 折叠为基础类型并单独存放在 enum 字段），直接使用并做规范化，
+    // 不能再按 JSON Schema 重新推导
     const raw = prop?.type?.trim();
     return raw ? normalizeType(raw, schemaNames) : 'string';
   }

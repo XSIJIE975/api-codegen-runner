@@ -30,9 +30,9 @@ export class Generator {
     if (this.config.clean) {
       logger.info('Cleaning output directories...');
       await fs.emptyDir(this.config.output.apiDir);
-      if (this.config.output.separateTypes) {
-        await fs.emptyDir(this.config.output.typeDir);
-      }
+      // typeDir 无论哪种类型模式都整体归属本工具：从 separateTypes 切换
+      // 到合并模式时，旧的拆分类型文件也必须被清掉
+      await fs.emptyDir(this.config.output.typeDir);
     }
 
     // 2. 生成类型文件

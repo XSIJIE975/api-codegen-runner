@@ -109,6 +109,25 @@ describe('Generator (integration)', () => {
     }
   });
 
+  it('empties typeDir in merged mode too when clean is true', async () => {
+    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'codegen-gen-'));
+    try {
+      const typeDir = path.join(tmp, 'types');
+      await fs.ensureDir(typeDir);
+      await fs.writeFile(path.join(typeDir, 'Stale.ts'), '// stale');
+
+      await makeGenerator(tmp, { clean: true, separateTypes: false }).generate(
+        makeStdout(),
+      );
+
+      // 切换到合并模式后，旧的拆分类型文件不应残留
+      expect(await fs.pathExists(path.join(typeDir, 'Stale.ts'))).toBe(false);
+      expect(await fs.pathExists(path.join(typeDir, 'index.ts'))).toBe(true);
+    } finally {
+      await fs.remove(tmp);
+    }
+  });
+
   it('does not rewrite files whose content is unchanged', async () => {
     const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'codegen-gen-'));
     try {
