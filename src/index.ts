@@ -1,9 +1,11 @@
 import { loadConfig } from 'unconfig';
+import path from 'path';
 import type { ViteDevServer, Plugin } from 'vite';
 import { DataLoader } from './core/loader';
 import { Generator } from './core/generator';
 import { validateConfig, ConfigValidationError } from './core/validator';
 import { logger } from './utils/logger';
+import { getCwd } from './utils/paths';
 import { UserConfig } from './types';
 
 export * from './types';
@@ -16,6 +18,26 @@ export function ApiCodegenPlugin(inlineConfig?: Partial<UserConfig>) {
   let isRunning = false;
   let isPending = false;
   let timer: NodeJS.Timeout | null = null;
+
+  // buildStart 与 configureServer 都需要加载配置，启动阶段复用同一次加载
+  let initialConfigPromise: Promise<UserConfig | undefined> | null = null;
+
+  // 当前配置指向的自定义模板绝对路径，用于精确匹配模板变更事件
+  // （避免项目里无关的 .ejs 文件也触发生成）
+  const templateFiles = new Set<string>();
+
+  const updateTemplateWatchList = (config?: UserConfig) => {
+    templateFiles.clear();
+    const cwd = getCwd();
+    for (const p of Object.values(config?.templates ?? {})) {
+      if (p) templateFiles.add(path.resolve(cwd, p));
+    }
+  };
+
+  const loadFinalConfigOnce = (): Promise<UserConfig | undefined> => {
+    initialConfigPromise ??= loadFinalConfig();
+    return initialConfigPromise;
+  };
 
   const loadFinalConfig = async (): Promise<UserConfig> => {
     const { config } = await loadConfig<UserConfig>({
@@ -33,9 +55,12 @@ export function ApiCodegenPlugin(inlineConfig?: Partial<UserConfig>) {
     isRunning = true;
 
     try {
+      // 每次生成都重新加载配置，保证 watch 场景下拿到最新内容
       const finalConfig = await loadFinalConfig();
 
       if (!finalConfig) return;
+
+      updateTemplateWatchList(finalConfig);
 
       const validConfig = await validateConfig(finalConfig);
 
@@ -72,23 +97,26 @@ export function ApiCodegenPlugin(inlineConfig?: Partial<UserConfig>) {
     apply: 'serve' as const,
 
     async buildStart() {
+      const finalConfig = await loadFinalConfigOnce();
+      updateTemplateWatchList(finalConfig);
       await runCodegen();
     },
 
     async configureServer(server: ViteDevServer) {
-      const finalConfig = await loadFinalConfig();
+      const finalConfig = await loadFinalConfigOnce();
 
-      if (finalConfig.watch === false) return;
+      if (finalConfig?.watch === false) return;
 
-      const debounceTime = finalConfig.watchDebounce ?? 1000;
+      const debounceTime = finalConfig?.watchDebounce ?? 1000;
 
       server.watcher.on('change', async (file) => {
         if (file.includes('codegen.config')) {
           logger.info('Configuration file changed. Reloading...');
           debouncedRunCodegen(debounceTime);
+          return;
         }
 
-        if (file.endsWith('.ejs')) {
+        if (templateFiles.has(file)) {
           logger.info('Template file changed. Regenerating...');
           debouncedRunCodegen(debounceTime);
         }
