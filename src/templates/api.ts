@@ -21,6 +21,8 @@ API 模板文档
    - fn.method (string): HTTP 方法 (小写)。例如 'get', 'post'
    - fn.url (string): 带有模板字面量的请求 URL。例如 \`/users/\${id}\`
    - fn.description (string): JSDoc 描述或摘要。
+     已由 Transformer 清洗：换行折叠为空格、'*/' 转义，可直接原样输出；
+     为空时模板不会生成注释块。
    - fn.responseType (string): TypeScript 返回类型。例如 'ApiSuccessResponse<UserVo>'
    
    - fn.hasPathParams (boolean): URL 是否包含路径参数？
@@ -101,20 +103,20 @@ API 模板文档
 <% } else { %>
 <%- config.importRequestStr %>
 <% } %>
-<% if (typeof interfaceExportMode === 'undefined' || interfaceExportMode === 'export') { %>
-import type { 
+<% if ((typeof interfaceExportMode === 'undefined' || interfaceExportMode === 'export') && imports.types.length > 0) { %>
+import type {
 <% imports.types.forEach(t => { %>  <%= t %>,
-<% }) %> 
+<% }) %>
 } from '<%= imports.relativePath %>';
 <% } %>
 
 <% functions.forEach(fn => { %>
 <% const preferredContentType = utils.getPreferredContentType(fn.bodyContentTypes); %>
 <% const bodyParam = utils.getParamByContentType(fn.allParams, preferredContentType); %>
-/**
- * <%= fn.description %>
+<% if (fn.description) { %>/**
+ * <%- fn.description %>
  */
-export function <%= fn.name %>(<%- utils.getParamsSignature(fn.allParams, preferredContentType) %>) {
+<% } %>export function <%= fn.name %>(<%- utils.getParamsSignature(fn.allParams, preferredContentType) %>) {
   return request.<%= fn.method %><<%- fn.responseType %>>(\`<%= fn.url %>\`, {
     <% if (bodyParam) { %>data: <%= bodyParam.name %>,<% } %>
     <% if (fn.hasQueryParams) { %>params,<% } %>

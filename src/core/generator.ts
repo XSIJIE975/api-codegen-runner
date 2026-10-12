@@ -2,7 +2,6 @@ import { performance } from 'perf_hooks';
 import fs from 'fs-extra';
 import path from 'path';
 import ejs from 'ejs';
-import prettier from 'prettier';
 import { camelCase, kebabCase, upperFirst } from 'lodash-es';
 import type { StandardOutput, OpenAPIOptions } from 'api-codegen-universal';
 import { UserConfig, ApiFileViewModel, FunctionParam } from '../types';
@@ -31,9 +30,9 @@ export class Generator {
     if (this.config.clean) {
       logger.info('Cleaning output directories...');
       await fs.emptyDir(this.config.output.apiDir);
-      if (this.config.output.separateTypes) {
-        await fs.emptyDir(this.config.output.typeDir);
-      }
+      // typeDir 无论哪种类型模式都整体归属本工具：从 separateTypes 切换
+      // 到合并模式时，旧的拆分类型文件也必须被清掉
+      await fs.emptyDir(this.config.output.typeDir);
     }
 
     // 2. 生成类型文件
@@ -80,12 +79,14 @@ export class Generator {
         code: allCode,
         isGlobal: true,
         name: 'index',
-        config: this.config.globalContext,
+        config: this.config.globalContext || {},
       });
       await this.writeFile(path.join(output.typeDir, `index${ext}`), rendered);
     } else {
       // Separate Logic ...
-      await fs.emptyDir(output.typeDir);
+      // 目录清理统一由 generate() 中 config.clean 控制，
+      // 这里不再无条件 emptyDir，否则 clean: false 时用户放在类型目录的
+      // 手写文件也会被清空。
       const entries = Object.entries(data.interfaces);
 
       // 注意：这里使用了 Promise.all 并发执行，只有 Promise 缓存才能防止日志重复
@@ -95,7 +96,7 @@ export class Generator {
             code: code,
             isGlobal: false,
             name: name,
-            config: this.config.globalContext,
+            config: this.config.globalContext || {},
           });
           await this.writeFile(
             path.join(output.typeDir, `${name}${ext}`),
@@ -130,24 +131,26 @@ export class Generator {
 
     const debugMap: Record<string, ApiFileViewModel> = {};
 
-    for (const [filePath, fileApis] of Object.entries(groups)) {
-      const fileData = { ...data, apis: fileApis };
+    await Promise.all(
+      Object.entries(groups).map(async ([filePath, fileApis]) => {
+        const fileData = { ...data, apis: fileApis };
 
-      const viewModel = this.transformer.transform(
-        fileData,
-        filePath,
-        output.typeDir,
-        output.apiDir,
-      );
+        const viewModel = this.transformer.transform(
+          fileData,
+          filePath,
+          output.typeDir,
+          output.apiDir,
+        );
 
-      if (debug) {
-        debugMap[filePath] = viewModel;
-      }
+        if (debug) {
+          debugMap[filePath] = viewModel;
+        }
 
-      const code = await this.renderTemplate('api', viewModel);
-      const absPath = path.join(output.apiDir, filePath);
-      await this.writeFile(absPath, code);
-    }
+        const code = await this.renderTemplate('api', viewModel);
+        const absPath = path.join(output.apiDir, filePath);
+        await this.writeFile(absPath, code);
+      }),
+    );
 
     if (debug) {
       await this.saveDebugInfo(debugMap);
@@ -292,16 +295,34 @@ export class Generator {
 
   private async writeFile(filePath: string, content: string) {
     await fs.ensureDir(path.dirname(filePath));
+
+    let finalContent = content;
     try {
-      // 读取实际调用方的 Prettier 配置进行格式化
+      // 惰性加载 prettier，读取实际调用方的配置进行格式化
+      const prettier = await import('prettier');
       const userOptions = (await prettier.resolveConfig(filePath)) || {};
-      const formatted = await prettier.format(content, {
+      finalContent = await prettier.format(content, {
         ...userOptions,
         parser: 'typescript',
       });
-      await fs.writeFile(filePath, formatted);
-    } catch {
-      await fs.writeFile(filePath, content);
+    } catch (error) {
+      logger.debug(
+        `Prettier format failed for ${filePath}, writing unformatted content:`,
+        error,
+      );
     }
+
+    // 内容未变化时跳过写入，避免无意义的 mtime 变更触发
+    // 下游 watcher（Vite HMR / IDE / git 状态）刷新
+    try {
+      const existing = await fs.readFile(filePath, 'utf-8');
+      if (existing === finalContent) {
+        return;
+      }
+    } catch {
+      // 文件不存在，正常写入
+    }
+
+    await fs.writeFile(filePath, finalContent);
   }
 }
