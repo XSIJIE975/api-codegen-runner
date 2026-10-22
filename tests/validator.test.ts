@@ -34,4 +34,21 @@ describe('validateConfig', () => {
     expect(config.watch).toBeUndefined();
     expect(config.watchDebounce).toBeUndefined();
   });
+
+  it('preserves nested requestConfig.codeGeneration options', async () => {
+    const config = await validateConfig({
+      ...baseConfig,
+      requestConfig: {
+        codeGeneration: {
+          interfaceExportMode: 'declare',
+          typeNamePrefix: 'Demo',
+        },
+      },
+    });
+
+    expect(config.requestConfig?.codeGeneration?.typeNamePrefix).toBe('Demo');
+    expect(config.requestConfig?.codeGeneration?.interfaceExportMode).toBe(
+      'declare',
+    );
+  });
 });

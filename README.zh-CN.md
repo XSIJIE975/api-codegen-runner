@@ -162,7 +162,7 @@ interface UserConfig {
 
   /**
    * 底层解析器配置 (api-codegen-universal)
-   * 用于控制路径分类、参数命名风格、接口导出模式等
+   * 用于控制路径分类、参数命名风格、接口导出模式、类型名前缀等
    * 详见 [OpenAPIOptions](https://www.npmjs.com/package/api-codegen-universal)
    */
   requestConfig?: OpenAPIOptions;
@@ -201,6 +201,37 @@ export default defineConfig({
   // ...其他配置
 });
 ```
+
+### 多项目类型前缀
+
+当多个项目生成到同一仓库的不同目录，且类型统一以全局 `declare` 输出时，同名类型（如 `User`、`PageDTO`）会互相冲突。可通过 `requestConfig.codeGeneration.typeNamePrefix` 为所有生成的类型名统一添加项目前缀：
+
+```typescript
+export default defineConfig({
+  input: 'https://example.com/openapi.json',
+  output: {
+    apiDir: 'src/api/demo',
+    typeDir: 'src/types/demo',
+    separateTypes: true,
+  },
+  requestConfig: {
+    codeGeneration: {
+      interfaceExportMode: 'declare',
+      typeNamePrefix: 'Demo',
+    },
+  },
+});
+```
+
+上述配置会把 `User` 生成为 `DemoUser`（文件为 `DemoUser.d.ts`），`Pet` 生成为 `DemoPet`，生成接口之间的 `$ref` 引用也会同步改写为带前缀的名称。不同项目使用不同前缀（如 `Other`）即可实现隔离。
+
+前缀需为合法的 TypeScript 标识符片段（如 `Demo`）。已以该前缀开头的名称会保持不变并给出告警，因此重复生成不会叠加前缀。
+
+该选项为 opt-in：不配置 `typeNamePrefix` 时，类型名与生成结果保持现状不变。使用前需确保 `api-codegen-universal >= 0.9.0`。
+
+> **从生成后前缀化迁移**
+>
+> 部分项目此前会在 `hooks.onComplete` 中对声明和 `.d.ts` 文件做重命名（如使用 `ts-morph`）。切换到原生 `typeNamePrefix` 后，该前缀步骤已不再需要，应移除；如果脚本是无条件加前缀，保留后会得到 `DemoDemoUser` 而不是 `DemoUser`。若确需保留，应先判断名称是否已带前缀。`metadata`、工厂、URL 映射、参数类型映射等其余钩子仍需保留。
 
 ## 模板自定义
 
