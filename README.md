@@ -162,7 +162,7 @@ interface UserConfig {
 
   /**
    * Underlying parser configuration (api-codegen-universal)
-   * Controls path classification, parameter naming style, interface export mode, etc.
+   * Controls path classification, parameter naming style, interface export mode, type name prefix, etc.
    * See [OpenAPIOptions](https://www.npmjs.com/package/api-codegen-universal)
    */
   requestConfig?: OpenAPIOptions;
@@ -201,6 +201,37 @@ export default defineConfig({
   // ...other config
 });
 ```
+
+### Multi-Project Type Prefixing
+
+When several projects generate code into different directories of the same repository and emit global `declare` interfaces, types with the same name (for example `User` or `PageDTO`) would collide. Set `requestConfig.codeGeneration.typeNamePrefix` to give every generated type name a project-specific prefix:
+
+```typescript
+export default defineConfig({
+  input: 'https://example.com/openapi.json',
+  output: {
+    apiDir: 'src/api/demo',
+    typeDir: 'src/types/demo',
+    separateTypes: true,
+  },
+  requestConfig: {
+    codeGeneration: {
+      interfaceExportMode: 'declare',
+      typeNamePrefix: 'Demo',
+    },
+  },
+});
+```
+
+With this configuration `User` becomes `DemoUser` (file `DemoUser.d.ts`), `Pet` becomes `DemoPet`, and `$ref` references between generated interfaces are rewritten to the prefixed names as well. Use a different prefix (such as `Other`) for each project.
+
+The prefix must be a valid TypeScript identifier fragment (for example `Demo`). Names that already start with the prefix are kept as-is and reported with a warning, so repeated runs do not stack prefixes.
+
+The option is opt-in: when `typeNamePrefix` is omitted, type names and generated files stay unchanged. It requires `api-codegen-universal >= 0.9.0`.
+
+> **Migrating from a post-generation prefix step**
+>
+> Some projects previously renamed declarations and `.d.ts` files inside `hooks.onComplete` (for example with `ts-morph`). After switching to `typeNamePrefix`, that prefix step is no longer needed and should be removed: an unconditional rename would now produce `DemoDemoUser` instead of `DemoUser`. If the step has to stay, make it skip names that already start with the prefix. Keep the rest of the hook pipeline (metadata, factories, URL mapping, parameter type mapping, etc.).
 
 ## Template Customization
 
